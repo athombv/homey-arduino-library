@@ -1,4 +1,4 @@
-#include "Homey.h"
+#include <Homey.h>
 
 HomeyClass::HomeyClass( uint16_t port )
 : _tcpServer(port), _udpServer(), _master_host(0,0,0,0)
@@ -582,6 +582,27 @@ bool HomeyClass::emit(const char* name, const char* type, const String& triggerV
 		client.print(",\"type\":\""); //9
 		client.print(type);
 		client.println("\"}"); //2
+		
+		//FOR ESP8266 ONLY
+		uint8_t timeout = 100;
+		while (client.available()==0) {
+			delay(1);
+			timeout--;
+			if (timeout<1) break;
+		}
+		
+		Serial.print("Trigger response time left");
+		Serial.println(timeout);
+		
+		String response = "";
+		
+		while (client.available()>0) {
+			char c = client.read();
+			response += c;
+		}
+		
+		Serial.print("Trigger response: ");
+		Serial.println(response);
 		
 		client.stop();
 		yield();

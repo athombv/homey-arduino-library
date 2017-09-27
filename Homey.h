@@ -1,33 +1,42 @@
 #ifndef _HOMEY_H_
 #define _HOMEY_H_
 
-#include "Arduino.h"
+#include <Arduino.h>
 
-#ifndef _HOMEY_ETH_H_
-	#if defined(ARDUINO_ARCH_ESP8266)
-		#include <ESP8266WiFi.h>
-		#include <WiFiClient.h>
-		#include <WiFiUdp.h>		
-		#define CLIENT_TYPE WiFiClient
-		#define UDP_SERVER_TYPE WiFiUDP
-		#define TCP_SERVER_TYPE WiFiServer
-		#define MAXCALLBACKS 10
-	#elif defined(ARDUINO_ARCH_ESP32)
-		#include <WiFi.h>
-		#include <WiFiUdp.h>
-		#define CLIENT_TYPE WiFiClient
-		#define UDP_SERVER_TYPE WiFiUDP
-		#define TCP_SERVER_TYPE WiFiServer
-		#define UDP_TX_PACKET_MAX_SIZE 1024
-		#define MAXCALLBACKS 10
-	#else
-		#include <Ethernet2.h>
-		#include <EthernetUdp2.h>
-		#define CLIENT_TYPE EthernetClient
-		#define UDP_SERVER_TYPE EthernetUDP
-		#define TCP_SERVER_TYPE EthernetServer
-		#define MAXCALLBACKS 10
-	#endif
+//Should you want to use the old ws5100 ethernet shield then uncomment the following line
+
+#define HOMEY_USE_ETHERNET_V1
+
+#if defined(ARDUINO_ARCH_ESP8266)
+	#include <ESP8266WiFi.h>
+	#include <WiFiClient.h>
+	#include <WiFiUdp.h>		
+	#define CLIENT_TYPE WiFiClient
+	#define UDP_SERVER_TYPE WiFiUDP
+	#define TCP_SERVER_TYPE WiFiServer
+	#define MAXCALLBACKS 10
+#elif defined(ARDUINO_ARCH_ESP32)
+	#include <WiFi.h>
+	#include <WiFiUdp.h>
+	#define CLIENT_TYPE WiFiClient
+	#define UDP_SERVER_TYPE WiFiUDP
+	#define TCP_SERVER_TYPE WiFiServer
+	#define UDP_TX_PACKET_MAX_SIZE 1024
+	#define MAXCALLBACKS 10
+#elif defined(HOMEY_USE_ETHERNET_V1)
+	#include <Ethernet.h>
+	#include <EthernetUdp.h>
+	#define CLIENT_TYPE EthernetClient
+	#define UDP_SERVER_TYPE EthernetUDP
+	#define TCP_SERVER_TYPE EthernetServer
+	#define MAXCALLBACKS 10
+#else
+	#include <Ethernet2.h>
+	#include <EthernetUdp2.h>
+	#define CLIENT_TYPE EthernetClient
+	#define UDP_SERVER_TYPE EthernetUDP
+	#define TCP_SERVER_TYPE EthernetServer
+	#define MAXCALLBACKS 10
 #endif
 
 //SETTINGS
