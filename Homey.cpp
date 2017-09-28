@@ -230,6 +230,7 @@ void HomeyClass::runCallback(CommandCallback* cb, const String& argument) {
 	lastError = "";
 	value = argument;
 	webResponseCode = 200;
+	webResponseText = "";
 	/*if (cb->fnString) {
 		webResponseText = "\""+cb->fnString()+"\"";
 	} else if (cb->fnInt) {
@@ -248,16 +249,13 @@ void HomeyClass::runCallback(CommandCallback* cb, const String& argument) {
 		}
 	} else {
 		webResponseCode = 501;
-		webResponseText = "rCbErr";
+		lastError = "Callback not found?";
 	}
 	
 	if (failed) webResponseCode = 500;
-		
-	if (webResponseCode == 200) {
-		webResponseText = "{\"result\":"+webResponseText+"}";
-	} else {
-		webResponseText = "{\"error\":\""+lastError+"\",\"result\":"+webResponseText+"}";
-	}
+
+	Serial.println("ERROR: "+lastError);
+	Serial.println("RESPONSE: "+webResponseText);
 }
 
 String HomeyClass::descCallback(CommandCallback* cb) {	
@@ -275,7 +273,7 @@ String HomeyClass::descCallback(CommandCallback* cb) {
 	return desc;
 }
 
-String HomeyClass::createJsonIndex(uint16_t part, uint8_t lc){
+/*String HomeyClass::createJsonIndex(uint16_t part, uint8_t lc){
 	if (part==0) return "{\"id\":\""+_name+"\",\"master\":{\"host\":\""+String(_master_host[0])+"."+String(_master_host[1])+"."+String(_master_host[2])+"."+String(_master_host[3])+"\", \"port\":"+String(_master_port)+"},\"api\":{";
 	part--;
 	if (part<MAXCALLBACKS) {
@@ -291,14 +289,15 @@ String HomeyClass::createJsonIndex(uint16_t part, uint8_t lc){
 	} else {
 		return "";
 	}
-}
+}*/
 
 //void HomeyClass::handleRequest(const String& endpoint, String argument, WebResponse* response) {
 void HomeyClass::handleRequest(const char* endpoint, const String& argument) {
 	//if (endpoint=="") {
 	if (endpoint[0]==0) {
 		webResponseCode = 400;
-		webResponseText = "{\"error\":\"invalid request\"}";
+		lastError = "invalid request";
+		webResponseText = "";
 	//} else if (endpoint=="/") {
 	} else if (strncmp(endpoint,"/\0",2)==0) {
 		webResponseCode = 1;
@@ -308,12 +307,14 @@ void HomeyClass::handleRequest(const char* endpoint, const String& argument) {
 		uint16_t port = getToken(argument,':',1).toInt();
 		if ((host=="") || (port<1) || (!_master_host.fromString(host))) {
 			webResponseCode = 400;
-			webResponseText = "{\"error\":\"invalid argument\"}";
+			lastError = "invalid argument";
+			webResponseText = "false";
 			return;
 		}
 		_master_port = port;
 		webResponseCode = 200;
-		webResponseText = "{\"result\":\"ok\"}";
+		lastError = "";
+		webResponseText = "true";
 		//DEBUG_PRINTLN("Master set to "+host+":"+String(port));
 	} else {
 		//endpoint.remove(0,1); //Remove "/" from start of string
@@ -325,6 +326,7 @@ void HomeyClass::handleRequest(const char* endpoint, const String& argument) {
 		for (uint8_t i = 0; i<MAXCALLBACKS; i++) {
 			if (callbacks[i]) {
 				uint8_t l = strnlen(callbacks[i]->name, NAME_LEN)+1;
+				//Serial.println("Looking for "+String(endpointCompareTo)+", found "+String(callbacks[i]->name));
 				if (strncmp(endpointCompareTo,callbacks[i]->name, l)==0) {
 					cb = callbacks[i];
 					break;
@@ -334,9 +336,12 @@ void HomeyClass::handleRequest(const char* endpoint, const String& argument) {
 		
 		if (cb==NULL) {
 			webResponseCode = 404;
-			webResponseText = "{\"error\":\"not found\"}";
+			webResponseText = "";
+			lastError = "unknown call";
+			Serial.println("404");
 		} else {
 			runCallback(cb, argument);
+			Serial.println("RUN CB");
 		}
 	}
 }
@@ -375,7 +380,7 @@ bool HomeyClass::handleUdp() {
 
 		_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
 		if (webResponseCode==1) {
-			bool parsing = true;
+			/*bool parsing = true;
 			uint16_t i = 0;
 			uint8_t lc = 0;
 			while(parsing) {
@@ -388,9 +393,32 @@ bool HomeyClass::handleUdp() {
 					parsing = false;
 				}
 				i++;
+			}*/
+						
+			_udpServer.print("{\"id\":\"");
+			_udpServer.print( _name);
+			_udpServer.print("\",\"master\":{\"host\":\"");
+			_udpServer.print(_master_host);
+			_udpServer.print("\", \"port\":");
+			_udpServer.print(_master_port);
+			_udpServer.print("},\"api\":{");
+			bool first = true;
+			for (uint8_t i = 0; i<MAXCALLBACKS; i++) {
+				if (callbacks[i]!=NULL) {
+					if (!first) _udpServer.print(',');
+					first = false;
+					_udpServer.print(descCallback(callbacks[i]));
+				}
 			}
+			_udpServer.print("}}");
+			
 		} else {
-			_udpServer.write((uint8_t*) webResponseText.c_str(), webResponseText.length());
+			_udpServer.print("{\"error\":\"");
+			_udpServer.print(lastError);
+			_udpServer.print("\",\"result\":");
+			if (webResponseText=="") webResponseText = "\"\"";
+			_udpServer.print(webResponseText);
+			_udpServer.print("}");
 		}
 		_udpServer.endPacket();
 		return true;
@@ -434,13 +462,14 @@ void HomeyClass::handleTcp() {
 			client.println("Content-Type: application/json");
 			client.println("Connection: close");
 			client.println();
+						
 			if (sendIndex) {
-				bool parsing = true;
+				/*bool parsing = true;
 				uint16_t i = 0;
 				uint8_t lc = 0;
 				while(parsing) {
 					String line = createJsonIndex(i, lc);
-					//Serial.println(String(i)+"("+String(lc)+"): "+line);
+					Serial.println(String(i)+"("+String(lc)+"): "+line);
 					if ((line!="~")&&(line!="")) {
 						client.println(line);
 						lc++;
@@ -449,9 +478,33 @@ void HomeyClass::handleTcp() {
 						parsing = false;
 					}
 					i++;
+				}*/
+				//writeIndex(client, NULL);
+				
+				client.print("{\"id\":\"");
+				client.print( _name);
+				client.print("\",\"master\":{\"host\":\"");
+				client.print(_master_host);
+				client.print("\", \"port\":");
+				client.print(_master_port);
+				client.print("},\"api\":{");
+				bool first = true;
+				for (uint8_t i = 0; i<MAXCALLBACKS; i++) {
+					if (callbacks[i]!=NULL) {
+						if (!first) client.print(',');
+						first = false;
+						client.print(descCallback(callbacks[i]));
+					}
 				}
+				client.print("}}");
+				
 			} else {
-				client.println(webResponseText);
+				client.print("{\"error\":\"");
+				client.print(lastError);
+				client.print("\",\"result\":");
+				if (webResponseText=="") webResponseText = "\"\"";
+				client.print(webResponseText);
+				client.print("}");
 			}
 		}
 		client.stop();
@@ -508,6 +561,11 @@ bool HomeyClass::on(CommandCallback *cb) {
 CommandCallback* HomeyClass::createEmptyCallback(const String& name) {
 	CommandCallback *cb = new CommandCallback;
 	name.toCharArray(cb->name, NAME_LEN);
+	
+	for (uint8_t i = 0; i<strlen(cb->name)-1; i++) { //Replace spaces with underscores
+		if (cb->name[i]==' ') cb->name[i] = '_';
+	}
+	
 	//cb->fnString = NULL;
 	//cb->fnInt = NULL;
 	//cb->fnFloat = NULL;
@@ -630,7 +688,7 @@ bool HomeyClass::emitBoolean(const String& name, bool value) {
 }
 
 bool HomeyClass::emit(const String& name) {
-	return emit(name.c_str(), "null", "");
+	return emit(name.c_str(), "null", "\"\"");
 }
 
 void HomeyClass::returnError(const String& error) {

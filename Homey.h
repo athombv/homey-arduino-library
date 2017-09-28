@@ -134,7 +134,7 @@ class HomeyClass {
 		void parseRequest(CLIENT_TYPE* client);	
 		
 		void runCallback(CommandCallback* cb, const String& argument);
-		String createJsonIndex(uint16_t part, uint8_t lc);
+		//String createJsonIndex(uint16_t part, uint8_t lc);
 		String descCallback(CommandCallback* cb);
 		void handleRequest(const char* endpoint, const String& argument);
 		
