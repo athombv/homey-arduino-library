@@ -253,9 +253,6 @@ void HomeyClass::runCallback(CommandCallback* cb, const String& argument) {
 	}
 	
 	if (failed) webResponseCode = 500;
-
-	Serial.println("ERROR: "+lastError);
-	Serial.println("RESPONSE: "+webResponseText);
 }
 
 String HomeyClass::descCallback(CommandCallback* cb) {	
@@ -338,10 +335,8 @@ void HomeyClass::handleRequest(const char* endpoint, const String& argument) {
 			webResponseCode = 404;
 			webResponseText = "";
 			lastError = "unknown call";
-			Serial.println("404");
 		} else {
 			runCallback(cb, argument);
-			Serial.println("RUN CB");
 		}
 	}
 }
@@ -463,24 +458,7 @@ void HomeyClass::handleTcp() {
 			client.println("Connection: close");
 			client.println();
 						
-			if (sendIndex) {
-				/*bool parsing = true;
-				uint16_t i = 0;
-				uint8_t lc = 0;
-				while(parsing) {
-					String line = createJsonIndex(i, lc);
-					Serial.println(String(i)+"("+String(lc)+"): "+line);
-					if ((line!="~")&&(line!="")) {
-						client.println(line);
-						lc++;
-					}
-					if (line=="") {
-						parsing = false;
-					}
-					i++;
-				}*/
-				//writeIndex(client, NULL);
-				
+			if (sendIndex) {			
 				client.print("{\"id\":\"");
 				client.print( _name);
 				client.print("\",\"master\":{\"host\":\"");
@@ -497,7 +475,6 @@ void HomeyClass::handleTcp() {
 					}
 				}
 				client.print("}}");
-				
 			} else {
 				client.print("{\"error\":\"");
 				client.print(lastError);
@@ -649,10 +626,7 @@ bool HomeyClass::emit(const char* name, const char* type, const String& triggerV
 			timeout--;
 			if (timeout<1) break;
 		}
-		
-		Serial.print("Trigger response time left");
-		Serial.println(timeout);
-		
+				
 		String response = "";
 		
 		while (client.available()>0) {
@@ -660,8 +634,8 @@ bool HomeyClass::emit(const char* name, const char* type, const String& triggerV
 			response += c;
 		}
 		
-		Serial.print("Trigger response: ");
-		Serial.println(response);
+		//Serial.print("Trigger response: ");
+		//Serial.println(response);
 		
 		client.stop();
 		yield();
