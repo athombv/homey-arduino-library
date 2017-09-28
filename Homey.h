@@ -5,7 +5,7 @@
 
 //Should you want to use the old ws5100 ethernet shield then uncomment the following line
 
-#define HOMEY_USE_ETHERNET_V1
+//#define HOMEY_USE_ETHERNET_V1
 
 #if defined(ARDUINO_ARCH_ESP8266)
 	#include <ESP8266WiFi.h>
