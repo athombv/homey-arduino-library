@@ -256,7 +256,7 @@ void HomeyClass::runCallback(CommandCallback* cb, const String& argument) {
 	if (webResponseCode == 200) {
 		webResponseText = "{\"result\":"+webResponseText+"}";
 	} else {
-		webResponseText = "{\"error\":"+lastError+",\"result\":"+webResponseText+"}";
+		webResponseText = "{\"error\":\""+lastError+"\",\"result\":"+webResponseText+"}";
 	}
 }
 
