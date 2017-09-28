@@ -227,6 +227,7 @@ void HomeyClass::parseRequest(CLIENT_TYPE* client) {
 
 void HomeyClass::runCallback(CommandCallback* cb, const String& argument) {
 	failed = false;	
+	lastError = "";
 	value = argument;
 	webResponseCode = 200;
 	/*if (cb->fnString) {
@@ -255,7 +256,7 @@ void HomeyClass::runCallback(CommandCallback* cb, const String& argument) {
 	if (webResponseCode == 200) {
 		webResponseText = "{\"result\":"+webResponseText+"}";
 	} else {
-		webResponseText = "{\"error\":"+webResponseText+"}";
+		webResponseText = "{\"error\":"+lastError+"\"result\":"+webResponseText+"}";
 	}
 }
 
@@ -630,6 +631,11 @@ bool HomeyClass::emitBoolean(const String& name, bool value) {
 
 bool HomeyClass::emit(const String& name) {
 	return emit(name.c_str(), "null", "");
+}
+
+void HomeyClass::returnError(const String& error) {
+	lastError = error;
+	failed = true;
 }
 
 HomeyClass Homey;

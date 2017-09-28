@@ -104,13 +104,14 @@ class HomeyClass {
 		//void clear();
 		
 		String value;
-		bool failed;
-		
+				
 		bool emitText(const String& name, const String& value);
 		bool emitNumber(const String& name, int value);
 		bool emitNumber(const String& name, float value);
 		bool emitBoolean(const String& name, bool value);
 		bool emit(const String& name);
+		
+		void returnError(const String& error);
 		
 	private:
 		TCP_SERVER_TYPE _tcpServer;
@@ -146,6 +147,9 @@ class HomeyClass {
 		uint16_t _master_port;
 		
 		bool emit(const char* name, const char* type, const String& value);
+		
+		bool failed;
+		String lastError;
 		
 		
 };
