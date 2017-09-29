@@ -3,7 +3,7 @@
 
     Connections:
       - A pump is connected to pin 2 via a relay module or a mosfet
-      - A float sensor is connected to pin A3. This sensor has a digital output (closed when not floating, open when floating)
+      - A float sensor is connected to pin 3. This sensor has a digital output (closed when not floating, open when floating)
       - Two water sensors connected to pins A0 and A1. These sensors have an analog output.
 */
 
@@ -14,7 +14,7 @@
 
 //Pin definitions
 #define PIN_PUMP      2   //Connected to mosfet / pump (digital output)
-#define PIN_FLOAT     A3  //Connected to the float (digital input)
+#define PIN_FLOAT     3   //Connected to the float (digital input)
 #define HUM_SENSOR_1  A0  //Connected to the first water sensor (analog input)
 #define HUM_SENSOR_2  A1  //Connected to the second water sensor (analog input)
 
