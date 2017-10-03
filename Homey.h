@@ -1,11 +1,22 @@
 #ifndef _HOMEY_H_
 #define _HOMEY_H_
 
+// Settings
+//#define HOMEY_USE_ETHERNET_V1 //Uncomment when using a legacy ethernet shield
+//#define DEBUG_ENABLE //Uncomment to have the library print debug messages
+
+// Advanced settings
+#define DEBUG_PRINTER Serial //Which class to use for printing debug mesages
+#define ENDPOINT_MAX_SIZE 17 //16 + null
+#define ARGUMENT_MAX_SIZE 65 //64 + null
+#define REQUEST_MAX_SIZE ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE
+#define HEADER_MAX_SIZE REQUEST_MAX_SIZE+16
+#define REQUEST_TIMEOUT 100
+
+/* DO NOT EDIT ANYTHING BELOW THIS LINE */
+
+//Includes
 #include <Arduino.h>
-
-//Should you want to use the old ws5100 ethernet shield then uncomment the following line
-
-//#define HOMEY_USE_ETHERNET_V1
 
 #if defined(ARDUINO_ARCH_ESP8266)
 	#include <ESP8266WiFi.h>
@@ -30,6 +41,7 @@
 	#define UDP_SERVER_TYPE EthernetUDP
 	#define TCP_SERVER_TYPE EthernetServer
 	#define MAXCALLBACKS 10
+	#define CAN_NOT_STOP_TCP
 #else
 	#include <Ethernet2.h>
 	#include <EthernetUdp2.h>
@@ -37,14 +49,10 @@
 	#define UDP_SERVER_TYPE EthernetUDP
 	#define TCP_SERVER_TYPE EthernetServer
 	#define MAXCALLBACKS 10
+	#define CAN_NOT_STOP_TCP
 #endif
 
-//SETTINGS
-#define DEBUG_ENABLE
-//--------
-
-#define DEBUG_PRINTER Serial
-
+//Debug function definition
 #ifdef DEBUG_ENABLE
   #define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
   #define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
@@ -53,21 +61,14 @@
   #define DEBUG_PRINTLN(...) {}
 #endif
 
-//typedef String (*CommandCallbackStringType)(void);
-//typedef int (*CommandCallbackIntType)(void);
-//typedef float (*CommandCallbackFloatType)(void);
-typedef void (*CommandCallbackVoidType)(void);
-typedef bool (*CommandCallbackBoolType)(void);
-
-#define NAME_LEN 16
+//Type definitions
+typedef void (*ActionCallback)(void);
+typedef bool (*ConditionCallback)(void);
 
 struct CommandCallback {
-	char name[NAME_LEN];
-	//CommandCallbackStringType fnString;
-	//CommandCallbackIntType fnInt;
-	//CommandCallbackFloatType fnFloat;
-	CommandCallbackVoidType fnVoid;
-	CommandCallbackBoolType fnBool;
+	char name[ENDPOINT_MAX_SIZE];
+	ActionCallback fnVoid;
+	ConditionCallback fnBool;
 };
 
 struct WebResponse {
@@ -76,53 +77,86 @@ struct WebResponse {
 };
 
 struct WebRequest {
-	String endpoint;
+	char endpoint[ENDPOINT_MAX_SIZE];
 	String getArgs;
 	String postArgs;
 };
 
 class HomeyClass {
 	public:
+		//Class constructor
 		HomeyClass( uint16_t port = 46639 ); //46639 = HOMEY
 		
+		//Start the servers
 		void begin(const String& name);
-		void stop();
-		void loop();
 		
+		//Stop the servers
+		void stop();
+		
+		//Set the device identifier
 		void name(const String& name);
 		
-		//bool on(const String& name, CommandCallbackStringType fn);
-		//bool on(const String& name, CommandCallbackIntType fn);
-		//bool on(const String& name, CommandCallbackFloatType fn);
-		//bool on(const String& name, CommandCallbackVoidType fn);
-		//bool on(const String& name, CommandCallbackBoolType fn);
+		//Handle incoming connections
+		void loop();
 		
-		bool onAction(const String& name, CommandCallbackVoidType fn);
-		bool onCondition(const String& name, CommandCallbackBoolType fn);
+		//Register an action
+		bool onAction(const String& name, ActionCallback fn);
 		
-		bool del(const String& name);
-		//void clear();
+		//Register a condition
+		bool onCondition(const String& name, ConditionCallback fn);
 		
-		String value;
-				
-		bool emitText(const String& name, const String& value);
-		bool emitNumber(const String& name, int value);
-		bool emitNumber(const String& name, float value);
-		bool emitBoolean(const String& name, bool value);
+		//Removes an action or condition
+		bool remove(const String& name);
+		
+		//Deletes all actions and conditions
+		void clear();
+		
+		//Emits a trigger to Homey
 		bool emit(const String& name);
 		
-		void returnError(const String& error);
+		//Emits a trigger with a string argument to Homey
+		bool emitText(const String& name, const String& value);
+		
+		//Emits a trigger with an integer argument to Homey
+		bool emitNumber(const String& name, int value);
+		
+		//Emits a trigger with a float argument to Homey
+		bool emitNumber(const String& name, float value);
+		
+		//Emits a trigger with a boolean argument to Homey
+		bool emitBoolean(const String& name, bool value);
+		
+		//Returns an error to the Homey flow
+		void returnError(const String& error, bool hasFailed = true);
+		
+		//Handle incoming TCP connections
+		bool handleTcp();
+		
+		//Handle incoming UDP connections
+		bool handleUdp();
+		
+		//The argument supplied by the Homey flow
+		String value;
 		
 	private:
+		//Helper function that splits a buffer separate parts
+		bool split(char* buffer, char*& a, char*& b, char separator, uint16_t size);
+		
+		//The TCP server
 		TCP_SERVER_TYPE _tcpServer;
+		
+		//The UDP server
 		UDP_SERVER_TYPE _udpServer;
 		
-		String _name;
+		//The listening port for incoming connections
+		uint16_t _port;
 		
+		//The device identifier
+		String _name;
+				
+		//The registered actions and conditions
 		CommandCallback *callbacks[MAXCALLBACKS];
 		
-		uint16_t _port;
-				
 		WebRequest _request;
 		
 		String webResponseText;
@@ -130,16 +164,12 @@ class HomeyClass {
 				
 		bool on(CommandCallback *cb);
 		
-		String getToken(const String& data, char separator, int index);
-		void parseRequest(CLIENT_TYPE* client);	
+		
+		bool parseRequest(CLIENT_TYPE* client);	
 		
 		void runCallback(CommandCallback* cb, const String& argument);
-		//String createJsonIndex(uint16_t part, uint8_t lc);
 		String descCallback(CommandCallback* cb);
-		void handleRequest(const char* endpoint, const String& argument);
-		
-		void handleTcp();
-		bool handleUdp();
+		void handleRequest(const char* endpoint, const char* argument);
 		
 		CommandCallback* createEmptyCallback(const String& name);
 

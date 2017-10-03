@@ -1,229 +1,238 @@
 #include <Homey.h>
 
+/* PUBLIC FUNCTIONS */
+
 HomeyClass::HomeyClass( uint16_t port )
 : _tcpServer(port), _udpServer(), _master_host(0,0,0,0)
-{
+{	//Class constructor
 	_port = port;
 	_name = "";
 	_master_port = 9999;
 }
 
-void HomeyClass::begin(const String& name) {
+void HomeyClass::begin(const String& name)
+{	//Start the servers
 	_name = name;
 	_tcpServer.begin();
 	_udpServer.begin(_port);
 }
 
-void HomeyClass::stop() {
+void HomeyClass::stop()
+{	//Stop the servers
+	#ifndef CAN_NOT_STOP_TCP
+	_tcpServer.stop();
+	#endif
 	_udpServer.stop();
-	//clear();
 }
 
-void HomeyClass::name(const String& name) {
+void HomeyClass::name(const String& name)
+{	//Set the device identifier
 	_name = name;
 }
 
-String HomeyClass::getToken(const String& data, char separator, int index)
-{
-    int found = 0;
-    int strIndex[] = { 0, -1 };
-    int maxIndex = data.length() - 1;
-
-    for (int i = 0; i <= maxIndex && found <= index; i++) {
-        if (data.charAt(i) == separator || i == maxIndex) {
-            found++;
-            strIndex[0] = strIndex[1] + 1;
-            strIndex[1] = (i == maxIndex) ? i+1 : i;
-        }
-    }
-    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+void HomeyClass::loop()
+{	//Handle incoming connections
+	while (handleUdp()) { yield(); }
+	yield();
+	while (handleTcp()) { yield(); }
 }
 
-#if 0
-void HomeyClass::parseRequest(CLIENT_TYPE* client) {
+bool HomeyClass::onAction(const String& name, ActionCallback fn)
+{	//Register an action
+	CommandCallback *cb = createEmptyCallback(name);
+	cb->fnVoid = fn;
+	if (on(cb)) return true;
+	delete cb;
+	return false;
+}
+
+bool HomeyClass::onCondition(const String& name, ConditionCallback fn)
+{	//Register a condition
+	CommandCallback *cb = createEmptyCallback(name);
+	cb->fnBool = fn;
+	if (on(cb)) return true;
+	delete cb;
+	return false;
+}
+
+bool HomeyClass::remove(const String& name)
+{	//Removes an action or condition
+	for (uint8_t i = 0; i<MAXCALLBACKS; i++) {
+		if (callbacks[i]) {
+			uint8_t l = strnlen(callbacks[i]->name, ENDPOINT_MAX_SIZE)+1;
+			if (strncmp(callbacks[i]->name,name.c_str(),l)==0) {
+				DEBUG_PRINTLN("delete cb #"+String(i));
+				delete callbacks[i];
+				callbacks[i] = NULL;
+				return true;
+				break;
+			}
+		}
+	}
+	return false;
+}
+
+void HomeyClass::clear()
+{	//Deletes all actions and conditions
+	for (uint8_t i = 0; i<MAXCALLBACKS; i++) {
+		if (callbacks[i]) {
+			delete callbacks[i];
+			callbacks[i] = NULL;
+		}
+	}
+}
+
+bool HomeyClass::emit(const String& name)
+{	//Emits a trigger to Homey
+	return emit(name.c_str(), "null", "\"\"");
+}
+
+bool HomeyClass::emitText(const String& name, const String& value)
+{	//Emits a trigger with a string argument to Homey
+	return emit(name.c_str(), "String", "\""+value+"\"");
+}
+bool HomeyClass::emitNumber(const String& name, int value)
+{	//Emits a trigger with an integer argument to Homey
+	return emit(name.c_str(), "Number", String(value));
+}
+bool HomeyClass::emitNumber(const String& name, float value)
+{	//Emits a trigger with a float argument to Homey
+	return emit(name.c_str(), "Number", String(value));
+}
+
+bool HomeyClass::emitBoolean(const String& name, bool value)
+{	//Emits a trigger with a boolean argument to Homey
+	String str = "false";
+	if (value) str = "true";
+	return emit(name.c_str(), "Boolean", str);
+}
+
+void HomeyClass::returnError(const String& error, bool hasFailed)
+{	//Returns an error to the Homey flow
+	lastError = error;
+	failed = hasFailed;
+}
+
+/* PRIVATE FUNCTIONS */
+bool HomeyClass::split(char* buffer, char*& a, char*& b, char separator, uint16_t size)
+{	//Helper function that splits a buffer into separate parts
+	a = buffer; //Set to start of buffer
+	b = &buffer[size-1]; //Set to end of buffer
 	
-	_request.endpoint = "";
+	for (uint8_t i = 0; i<size; i++) { //Find separator in buffer
+		if (buffer[i]==0) break; //Stop when at end-of-string
+		if (buffer[i]==separator) { //If current character is separator
+			buffer[i]=0; //Replace with end-of-string
+			b = &buffer[i+1]; //Adjust pointer of second half
+			return true; //Successfully split the buffer
+		}
+	}
+	return false; //Separator not found in buffer
+}
+
+bool HomeyClass::parseRequest(CLIENT_TYPE* client) {
+	DEBUG_PRINTLN("-----");
+	memset(_request.endpoint, 0, ENDPOINT_MAX_SIZE);
 	_request.getArgs = "";
 	_request.postArgs = "";
 	
-	if ((!client->connected())||(!client->available())) return;
+	char buffer[HEADER_MAX_SIZE] = {0};
 	
-	char requestType = client->read(); //Read first character in request
-	
-	uint8_t skip;
-	if ((requestType == 'P') || (requestType == 'p')) {
-		//Post request
-		skip = 4;
-	} else if ((requestType == 'G') || (requestType == 'g')) {
-		//Get request
-		skip = 3;
-	} else {
-		return;
+	uint8_t to = REQUEST_TIMEOUT;
+	while (client->available()<10) {
+		delay(1);
+		//DEBUG_PRINTLN("waiting... ("+String(to)+")");
+		to--;
+		if (to<1) break;
 	}
 	
-	uint8_t skipped = 0;
-	while (client->connected()&&client->available()&&(skipped<skip)) {//Skip until after 'GET ' or 'POST '
-		client->read();
-		skipped++;
-	}
+	DEBUG_PRINT("timeout: ");
+	DEBUG_PRINTLN(to);
 	
-	bool noArgs = false;
-	
-	while (client->connected()&&client->available()) {//Read into endpoint until '?'
-		char c = client->read();
-		if (c==' ') {
-			noArgs = true;
-			break;
-		}
-		if (c=='?') break;
-		_request.endpoint += c;
-	}
-	
-	if (!noArgs ) {
-		while (client->connected()&&client->available()) {//Read into getArgs until ' '
-			char c = client->read();
-			if (c==' ') break;
-			_request.getArgs += c;
-		}
-	}
-	
-	while (client->connected()&&client->available()) { //Skip rest of line
+	//Read first header into buffer
+	for (uint16_t i = 0; i<HEADER_MAX_SIZE; i++) {
+		if (!client->connected()) break;
+		if (!client->available()) break;
 		char c = client->read();
 		if (c=='\n') break;
+		if (c!='\r') buffer[i] = c;
 	}
 	
-	if ((!client->connected())||(!client->available())) return;
+	DEBUG_PRINT("First header: ");
+	DEBUG_PRINTLN(buffer);
 	
+	char* requestType;
+	char* request;
+	char* restOfBuffer;
+	
+	split(buffer, requestType, restOfBuffer, ' ', HEADER_MAX_SIZE);
+	split(restOfBuffer, request, restOfBuffer, ' ', HEADER_MAX_SIZE - strlen(requestType));
+	
+	bool postRequest = false;
+	
+	if (strncmp(requestType, "GET", 3)==0) {
+		DEBUG_PRINTLN("GET REQUEST");
+	} else if (strncmp(requestType, "POST", 4)==0) {
+		DEBUG_PRINTLN("POST REQUEST");
+		postRequest = true;
+	} else {
+		DEBUG_PRINTLN("INVALID REQUEST");
+		DEBUG_PRINT(">");
+		DEBUG_PRINT(requestType);
+		DEBUG_PRINTLN("<");
+		return false;
+	}
+		
+	char* endpoint;
+	char* argument;
+	
+	split(request, endpoint, argument, '?', REQUEST_MAX_SIZE);
+	
+	memcpy(_request.endpoint, endpoint, strnlen(endpoint, ENDPOINT_MAX_SIZE));
+	
+	_request.getArgs = argument;
+	
+	DEBUG_PRINTLN("-----");
+	
+	DEBUG_PRINT("Endpoint: ");
+	DEBUG_PRINTLN(endpoint);
+	
+	DEBUG_PRINT("Argument: ");
+	DEBUG_PRINTLN(argument);
+	
+	DEBUG_PRINTLN("-----");
+	
+	//Then skip over the other headers
 	bool emptyLine = true;
-	while (client->connected()&&client->available()){ //Skip rest of headers
+	while(client->connected() && client->available()) {
 		char c = client->read();
 		if (c=='\r') continue;
 		if (c=='\n') {
 			if (emptyLine) {
-				break; //End of headers
+				break; //End-of-headers
 			} else {
-				emptyLine = true; //New line, it could be empty...
+				//Just a header
+				emptyLine = true;
+				DEBUG_PRINTLN();
+				continue;
 			}
-		} else {
-			emptyLine = false;
 		}
+		emptyLine = false;
+		DEBUG_PRINT(c);
 	}
 	
-	while (client->connected() && client->available()) {
-		_request.postArgs += (char) client->read();
-	}
-}
-
-#else
-#if 0
-void HomeyClass::parseRequest(CLIENT_TYPE* client) {
-	bool newHeader = true;
-	bool isPost = false;
-	uint8_t timeout = 20;
+	DEBUG_PRINTLN("-----");
 	
-	uint16_t pos = 0;
-	uint8_t part = 0;
-	
-	_request.endpoint = "";
-	_request.getArgs = "";
-	
-	while(client->connected()) {
-		if (client->available()) {
-			char c = client->read();
-			if (newHeader && (c=='\n')) {
-				//Serial.println("end of headers");
-				break; //End of headers	
-			} else if (newHeader) {
-				//Serial.println("new header");
-				newHeader = false;
-				if ((c == 'P') || (c == 'G') || (c == 'p') || (c == 'g')) {
-					if ((c == 'P') || (c == 'p')) isPost = true;
-					pos = 1;
-					//Serial.println("is get or post");
-				} else {
-					//Serial.println("ignoring header");
-				}
-			} else if (c=='\n') {
-				newHeader = true;
-				Serial.println("eoh");
-			} else if (pos > 0) {
-				if (((!isPost)&&(pos < 4))||((isPost)&&(pos < 6))) {
-					pos++;
-					//Serial.println("ignoring "+c);
-				} else if (c != ' ') {
-					if (c=='?') {
-						part = 1;
-					} else if (part==1) {
-						_request.getArgs += c;
-						//Serial.println("getArgs: "+_request.getArgs);
-					} else if (part==0) {
-						_request.endpoint += c;
-						//Serial.println("endpoint: "+_request.endpoint);
-					}
-				} else {
-					part = 2;
-					//Done (wait for \n to appear...)
-				}
-			}
-	  } else {
-			timeout--;
-			if (timeout<1) break;
-		}
-	}
-	
-	if (isPost) { //Read POST data
-		//Serial.println("reading post data");
+	if (postRequest) { //Read POST data
 		while (client->connected() && client->available()) {
 			_request.postArgs += (char) client->read();
 		}
+		DEBUG_PRINT("Post arguments: ");
+		DEBUG_PRINTLN(_request.postArgs);
 	}
+	DEBUG_PRINTLN("-----");
+	return true;
 }
-
-#else
-void HomeyClass::parseRequest(CLIENT_TYPE* client) {
-	String currentHeader = "";
-	String path = "";
-	_request.postArgs = "";
-	
-	bool isPost = false;
-	uint8_t timeout = 20;
-	while(client->connected()) {
-		if (client->available()) {
-			char c = client->read();
-			if (c=='\n') {
-			if (currentHeader=="") break; //We've read all the headers and can continue
-			String title = getToken(currentHeader, ' ', 0);
-			if ((title=="GET")||(title=="POST")) {
-				path = getToken(currentHeader, ' ', 1);
-				if (title=="POST") isPost = true;
-			}/* else {
-				DEBUG_PRINTLN("ignored header: "+currentHeader);
-			}*/
-			currentHeader = "";
-			} else if (c!='\r') {
-			currentHeader = currentHeader + c;
-			}
-		} else {
-			timeout--;
-			if (timeout<1) {
-			//DEBUG_PRINTLN("timeout");
-			break;
-			}
-			delay(100);
-		}
-	}
-	
-	if (isPost) { //Read POST data
-		while (client->connected() && client->available()) {
-			_request.postArgs += (char) client->read();
-		}
-	}
-	
-	_request.endpoint = getToken(path, '?', 0);
-	_request.getArgs = getToken(path, '?', 1);
-}
-#endif
-#endif
 
 void HomeyClass::runCallback(CommandCallback* cb, const String& argument) {
 	failed = false;	
@@ -231,13 +240,7 @@ void HomeyClass::runCallback(CommandCallback* cb, const String& argument) {
 	value = argument;
 	webResponseCode = 200;
 	webResponseText = "";
-	/*if (cb->fnString) {
-		webResponseText = "\""+cb->fnString()+"\"";
-	} else if (cb->fnInt) {
-		webResponseText = String(cb->fnInt());
-	} else if (cb->fnFloat) {
-		webResponseText = String(cb->fnFloat());
-	} else*/ if (cb->fnVoid) {
+	if (cb->fnVoid) {
 		cb->fnVoid();
 		webResponseText = "true";
 	} else if (cb->fnBool) {
@@ -257,11 +260,7 @@ void HomeyClass::runCallback(CommandCallback* cb, const String& argument) {
 
 String HomeyClass::descCallback(CommandCallback* cb) {	
 	String desc = "\""+String(cb->name)+"\":\"";
-	/*if (cb->fnString) {
-		desc += "String";
-	} else if ((cb->fnInt)||(cb->fnFloat)) {
-		desc += "Number";
-	} else*/ if (cb->fnBool) {
+	if (cb->fnBool) {
 		desc += "Boolean";
 	} else {
 		desc += "null";
@@ -270,39 +269,31 @@ String HomeyClass::descCallback(CommandCallback* cb) {
 	return desc;
 }
 
-/*String HomeyClass::createJsonIndex(uint16_t part, uint8_t lc){
-	if (part==0) return "{\"id\":\""+_name+"\",\"master\":{\"host\":\""+String(_master_host[0])+"."+String(_master_host[1])+"."+String(_master_host[2])+"."+String(_master_host[3])+"\", \"port\":"+String(_master_port)+"},\"api\":{";
-	part--;
-	if (part<MAXCALLBACKS) {
-		if (callbacks[part]) {
-			String d = ",";
-			if (lc<2) d = "";
-			return d + descCallback(callbacks[part]);
-		} else {
-			return "~"; //Skip empty line
-		}
-	} else if (part==MAXCALLBACKS) {
-		return "}}";
-	} else {
-		return "";
-	}
-}*/
-
-//void HomeyClass::handleRequest(const String& endpoint, String argument, WebResponse* response) {
-void HomeyClass::handleRequest(const char* endpoint, const String& argument) {
-	//if (endpoint=="") {
+void HomeyClass::handleRequest(const char* endpoint, const char* argument) {
 	if (endpoint[0]==0) {
 		webResponseCode = 400;
 		lastError = "invalid request";
 		webResponseText = "";
-	//} else if (endpoint=="/") {
 	} else if (strncmp(endpoint,"/\0",2)==0) {
 		webResponseCode = 1;
-	//} else if (endpoint=="/cfg/reg") {
 	} else if (strncmp(endpoint,"/cfg/reg",8)==0) {
-		String host = getToken(argument,':',0);
-		uint16_t port = getToken(argument,':',1).toInt();
-		if ((host=="") || (port<1) || (!_master_host.fromString(host))) {
+		
+		char buffer[ARGUMENT_MAX_SIZE] = {0};
+		strncpy(buffer, argument, ARGUMENT_MAX_SIZE);
+		
+		char* arg_h;
+		char* arg_p;
+		
+		bool success = split(buffer, arg_h, arg_p, ':', ARGUMENT_MAX_SIZE);
+				
+		String host = arg_h;
+		uint16_t port = atoi(arg_p);
+		
+		DEBUG_PRINTLN("Host: "+host);
+		DEBUG_PRINT("Port: ");
+		DEBUG_PRINTLN(arg_p);
+		
+		if ((host=="") || (port<1) || (!_master_host.fromString(host) || (!success))) {
 			webResponseCode = 400;
 			lastError = "invalid argument";
 			webResponseText = "false";
@@ -314,16 +305,12 @@ void HomeyClass::handleRequest(const char* endpoint, const String& argument) {
 		webResponseText = "true";
 		//DEBUG_PRINTLN("Master set to "+host+":"+String(port));
 	} else {
-		//endpoint.remove(0,1); //Remove "/" from start of string
-		
-		//const char* epp = endpoint.c_str();
 		const char* endpointCompareTo = endpoint+1; //Remove first character
 				
 		CommandCallback* cb = NULL;		
 		for (uint8_t i = 0; i<MAXCALLBACKS; i++) {
 			if (callbacks[i]) {
-				uint8_t l = strnlen(callbacks[i]->name, NAME_LEN)+1;
-				//Serial.println("Looking for "+String(endpointCompareTo)+", found "+String(callbacks[i]->name));
+				uint8_t l = strnlen(callbacks[i]->name, ENDPOINT_MAX_SIZE)+1;
 				if (strncmp(endpointCompareTo,callbacks[i]->name, l)==0) {
 					cb = callbacks[i];
 					break;
@@ -336,7 +323,7 @@ void HomeyClass::handleRequest(const char* endpoint, const String& argument) {
 			webResponseText = "";
 			lastError = "unknown call";
 		} else {
-			runCallback(cb, argument);
+			runCallback(cb, String(argument));
 		}
 	}
 }
@@ -344,52 +331,26 @@ void HomeyClass::handleRequest(const char* endpoint, const String& argument) {
 bool HomeyClass::handleUdp() {
 	int packetSize = _udpServer.parsePacket();
 	if (packetSize) {
-		if (packetSize>=UDP_TX_PACKET_MAX_SIZE) {
+		if (packetSize>=ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE) {
 			_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
 			const char err[] = "{\"error\":\"packet too large\"}";
 			_udpServer.write((uint8_t*) err, strlen(err));
 			_udpServer.endPacket();
 			return true;
 		}
-		char packetBuffer[UDP_TX_PACKET_MAX_SIZE];
 		
-		_udpServer.read(packetBuffer, UDP_TX_PACKET_MAX_SIZE);
-		int pstrlen = strnlen(packetBuffer, UDP_TX_PACKET_MAX_SIZE);
+		char buffer[ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE] = {0};
+		_udpServer.read(buffer, ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE-1);
 		
-		if (packetSize!=pstrlen+1) {
-			_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
-			const char err[] = "{\"error\":\"pkt not null term\"}";
-			_udpServer.write((uint8_t*) err, strlen(err));
-			_udpServer.endPacket();
-			return true;
-		}
+		char* endpoint;
+		char* argument;
 		
-		String endpoint = getToken(String(packetBuffer), '?', 0);
-		String argument = getToken(String(packetBuffer), '?', 1);
-		
-		_request.endpoint = endpoint;
-		_request.getArgs = argument;
-		_request.postArgs = "";
-		
-		handleRequest(endpoint.c_str(), argument);
+		bool success = split(buffer, endpoint, argument, '?', ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE);
+						
+		handleRequest(endpoint, argument);
 
 		_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
 		if (webResponseCode==1) {
-			/*bool parsing = true;
-			uint16_t i = 0;
-			uint8_t lc = 0;
-			while(parsing) {
-				String line = createJsonIndex(i, lc);
-				if ((line!="~")&&(line!="")) {
-					_udpServer.write((uint8_t*) line.c_str(), line.length());
-					lc++;
-				}
-				if (line=="") {
-					parsing = false;
-				}
-				i++;
-			}*/
-						
 			_udpServer.print("{\"id\":\"");
 			_udpServer.print( _name);
 			_udpServer.print("\",\"master\":{\"host\":\"");
@@ -421,19 +382,29 @@ bool HomeyClass::handleUdp() {
 	return false; //Handle TCP next
 }
 
-void HomeyClass::handleTcp() {
+bool HomeyClass::handleTcp() {
 	CLIENT_TYPE client = _tcpServer.available();
 	if (client) {
-		parseRequest(&client);
-		if (client.connected()) {			
-			String argument = _request.getArgs;
-			if (_request.postArgs.length()>0) argument = _request.postArgs;
-			handleRequest(_request.endpoint.c_str(), argument);
-			
+		bool valid = parseRequest(&client);
+		if (client.connected()) {
 			bool sendIndex = false;
-			if (webResponseCode==1) {
-				sendIndex = true;
-				webResponseCode = 200;
+			if (!valid) {
+				webResponseCode = 400;
+				webResponseText = "";
+				lastError = "Could not parse request";
+			} else {
+				if (_request.postArgs.length()>0) {
+					DEBUG_PRINTLN("Handled as post request");
+					handleRequest(_request.endpoint, _request.postArgs.c_str());
+				} else {
+					DEBUG_PRINTLN("Handled as get request");
+					handleRequest(_request.endpoint, _request.getArgs.c_str());
+				}
+				
+				if (webResponseCode==1) {
+					sendIndex = true;
+					webResponseCode = 200;
+				}
 			}
 			
 			const char* desc;
@@ -486,43 +457,10 @@ void HomeyClass::handleTcp() {
 		}
 		client.stop();
 		yield();
+		return true;
 	}
+	return false;
 }
-
-void HomeyClass::loop() {
-	for (uint8_t i = 0; i<5; i++) {
-		if (!handleUdp()) {
-			yield();
-			handleTcp();
-		}
-		yield();
-	}
-}
-
-bool HomeyClass::del(const String& name) {
-  for (uint8_t i = 0; i<MAXCALLBACKS; i++) {
-    if (callbacks[i]) {
-		uint8_t l = strnlen(callbacks[i]->name, NAME_LEN)+1;
-		if (strncmp(callbacks[i]->name,name.c_str(),l)==0) {
-			//DEBUG_PRINTLN("delete cb #"+String(i));
-			delete callbacks[i];
-			callbacks[i] = NULL;
-			return true;
-			break;
-		}
-	}
-  }
-  return false;
-}
-
-/*void HomeyClass::clear() {
-  for (uint8_t i = 0; i<MAXCALLBACKS; i++) {
-    if (callbacks[i]) {
-		delete callbacks[i];
-		callbacks[i] = NULL;
-	}
-  }
-}*/
 
 bool HomeyClass::on(CommandCallback *cb) {
   for (uint8_t i = 0; i<MAXCALLBACKS; i++) {
@@ -537,67 +475,21 @@ bool HomeyClass::on(CommandCallback *cb) {
 
 CommandCallback* HomeyClass::createEmptyCallback(const String& name) {
 	CommandCallback *cb = new CommandCallback;
-	name.toCharArray(cb->name, NAME_LEN);
+	name.toCharArray(cb->name, ENDPOINT_MAX_SIZE);
 	
 	for (uint8_t i = 0; i<strlen(cb->name)-1; i++) { //Replace spaces with underscores
 		if (cb->name[i]==' ') cb->name[i] = '_';
 	}
 	
-	//cb->fnString = NULL;
-	//cb->fnInt = NULL;
-	//cb->fnFloat = NULL;
 	cb->fnVoid = NULL;
 	cb->fnBool = NULL;
 	return cb;
-}
-
-/*bool HomeyClass::on(const String& name, CommandCallbackStringType fn) {
-	CommandCallback *cb = createEmptyCallback(name);
-	cb->fnString = fn;
-	if (on(cb)) return true;
-	delete cb;
-	return false;
-}
-
-bool HomeyClass::on(const String& name, CommandCallbackIntType fn) {
-	CommandCallback *cb = createEmptyCallback(name);
-	cb->fnInt = fn;
-	if (on(cb)) return true;
-	delete cb;
-	return false;
-}
-
-bool HomeyClass::on(const String& name, CommandCallbackFloatType fn) {
-	CommandCallback *cb = createEmptyCallback(name);
-	cb->fnFloat = fn;
-	if (on(cb)) return true;
-	delete cb;
-	return false;
-}*/
-
-//bool HomeyClass::on(const String& name, CommandCallbackVoidType fn) {
-bool HomeyClass::onAction(const String& name, CommandCallbackVoidType fn) {
-	CommandCallback *cb = createEmptyCallback(name);
-	cb->fnVoid = fn;
-	if (on(cb)) return true;
-	delete cb;
-	return false;
-}
-
-//bool HomeyClass::on(const String& name, CommandCallbackBoolType fn) {
-bool HomeyClass::onCondition(const String& name, CommandCallbackBoolType fn) {
-	CommandCallback *cb = createEmptyCallback(name);
-	cb->fnBool = fn;
-	if (on(cb)) return true;
-	delete cb;
-	return false;
 }
 
 bool HomeyClass::emit(const char* name, const char* type, const String& triggerValue) {
 	yield();
 	if (_master_host[0]==0) return false; //Master IP not set: this function is doomed to fail so exit
 	CLIENT_TYPE client;
-	//String postData = "{\"argument\":"+triggerValue+",\"type\":\""+type+"\"}";
 	if (client.connect(_master_host, _master_port)) {
 		client.print("POST /trigger/");
 		client.print(name);
@@ -634,8 +526,8 @@ bool HomeyClass::emit(const char* name, const char* type, const String& triggerV
 			response += c;
 		}
 		
-		//Serial.print("Trigger response: ");
-		//Serial.println(response);
+		//DEBUG_PRINT("Trigger response: ");
+		//DEBUG_PRINTLN(response);
 		
 		client.stop();
 		yield();
@@ -643,31 +535,6 @@ bool HomeyClass::emit(const char* name, const char* type, const String& triggerV
 	}
 	yield();
 	return false;
-}
-
-bool HomeyClass::emitText(const String& name, const String& value) {
-	return emit(name.c_str(), "String", "\""+value+"\"");
-}
-bool HomeyClass::emitNumber(const String& name, int value) {
-	return emit(name.c_str(), "Number", String(value));
-}
-bool HomeyClass::emitNumber(const String& name, float value) {
-	return emit(name.c_str(), "Number", String(value));
-}
-
-bool HomeyClass::emitBoolean(const String& name, bool value) {
-	String str = "false";
-	if (value) str = "true";
-	return emit(name.c_str(), "Boolean", str);
-}
-
-bool HomeyClass::emit(const String& name) {
-	return emit(name.c_str(), "null", "\"\"");
-}
-
-void HomeyClass::returnError(const String& error) {
-	lastError = error;
-	failed = true;
 }
 
 HomeyClass Homey;
