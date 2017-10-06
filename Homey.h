@@ -3,17 +3,30 @@
 
 // Settings
 //#define HOMEY_USE_ETHERNET_V1 //Uncomment when using a legacy ethernet shield
-//#define DEBUG_ENABLE //Uncomment to have the library print debug messages
+#define DEBUG_ENABLE //Uncomment to have the library print debug messages
 
 // Advanced settings
 #define DEBUG_PRINTER Serial //Which class to use for printing debug mesages
+
+/* -------------- DO NOT EDIT ANYTHING BELOW THIS LINE!  -------------- */
+/* (If you do you might break compatibility with the Homeyduino app...) */
+
+//
 #define ENDPOINT_MAX_SIZE 17 //16 + null
 #define ARGUMENT_MAX_SIZE 65 //64 + null
 #define REQUEST_MAX_SIZE ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE
 #define HEADER_MAX_SIZE REQUEST_MAX_SIZE+16
 #define REQUEST_TIMEOUT 100
 
-/* DO NOT EDIT ANYTHING BELOW THIS LINE */
+#define MAX_NAME_LENGTH 32
+#define MAX_TYPE_LENGTH 32
+
+#define TYPE_ACTION "act"
+#define TYPE_CONDITION "con"
+#define TYPE_CAPABILITY "cap"
+#define TYPE_SYSTEM "sys"
+
+#define ENDPOINT_SET_MASTER "/sys/setmaster"
 
 //Includes
 #include <Arduino.h>
@@ -62,13 +75,18 @@
 #endif
 
 //Type definitions
-typedef void (*ActionCallback)(void);
-typedef bool (*ConditionCallback)(void);
+//typedef void (*ActionCallback)(void);
+//typedef bool (*ConditionCallback)(void);
 
-struct CommandCallback {
-	char name[ENDPOINT_MAX_SIZE];
-	ActionCallback fnVoid;
-	ConditionCallback fnBool;
+typedef void (*CallbackFunction)(void);
+
+struct HomeyFunction {
+	HomeyFunction(char* newName, char* newType, CallbackFunction newCallback);
+	HomeyFunction* prevFunction;	//Linked list (<)
+	HomeyFunction* nextFunction;	//Linked list (>)
+	char* type;				//Type
+	char* name;				//Name
+	CallbackFunction callback;		//Function pointer
 };
 
 struct WebResponse {
@@ -99,14 +117,20 @@ class HomeyClass {
 		//Handle incoming connections
 		void loop();
 		
-		//Register an action
-		bool onAction(const String& name, ActionCallback fn);
+		//Register api calls
+		bool onAction(const String& name, CallbackFunction fn);
+		bool onCondition(const String& name, CallbackFunction fn);
+		bool onCapability(const String& name, CallbackFunction fn);
+		bool on(const String& name, const String& type, CallbackFunction fn);
 		
-		//Register a condition
-		bool onCondition(const String& name, ConditionCallback fn);
+		//Finding api calls
+		HomeyFunction* findAction(const char* name);
+		HomeyFunction* findCondition(const char* name);
+		HomeyFunction* findCapability(const char* name);
+		HomeyFunction* find(const char* name, const char* type);
 		
-		//Removes an action or condition
-		bool remove(const String& name);
+		//Remove api calls
+		bool remove(const char* name, const char* type);
 		
 		//Deletes all actions and conditions
 		void clear();
@@ -114,20 +138,20 @@ class HomeyClass {
 		//Emits a trigger to Homey
 		bool emit(const String& name);
 		
-		//Emits a trigger with a string argument to Homey
+		//Emit a trigger to Homey
 		bool emitText(const String& name, const String& value);
-		
-		//Emits a trigger with an integer argument to Homey
 		bool emitNumber(const String& name, int value);
-		
-		//Emits a trigger with a float argument to Homey
 		bool emitNumber(const String& name, float value);
-		
-		//Emits a trigger with a boolean argument to Homey
 		bool emitBoolean(const String& name, bool value);
 		
-		//Returns an error to the Homey flow
-		void returnError(const String& error, bool hasFailed = true);
+		//Returns a result to Homey
+		void returnIndex();
+		void returnNothing();
+		void returnError(const String& error, uint16_t code = 500);
+		void returnText(const String& result);
+		void returnBoolean(bool result);
+		void returnNumber(int result);
+		void returnNumber(float result);
 		
 		//Handle incoming TCP connections
 		bool handleTcp();
@@ -155,32 +179,35 @@ class HomeyClass {
 		String _name;
 				
 		//The registered actions and conditions
-		CommandCallback *callbacks[MAXCALLBACKS];
+		HomeyFunction *callbacks[MAXCALLBACKS];
 		
 		WebRequest _request;
 		
-		String webResponseText;
-		uint16_t webResponseCode;
+		//Response
+		String response;
+		String responseType;
+		uint16_t responseCode;
 				
-		bool on(CommandCallback *cb);
-		
+		bool on(const char* name, const char* type, CallbackFunction cb);		
 		
 		bool parseRequest(CLIENT_TYPE* client);	
 		
-		void runCallback(CommandCallback* cb, const String& argument);
-		String descCallback(CommandCallback* cb);
-		void handleRequest(const char* endpoint, const char* argument);
+		void runCallback(HomeyFunction* cb, const String& argument);
+		String descCallback(HomeyFunction* cb);
+		void handleRequest(char* endpoint, const char* argument);
 		
-		CommandCallback* createEmptyCallback(const String& name);
+		//HomeyFunction* createEmptyCallback(const String& name);
 
 		IPAddress _master_host;
 		uint16_t _master_port;
 		
 		bool emit(const char* name, const char* type, const String& value);
+				
+		//Linked list entrypoints
+		HomeyFunction* firstHomeyFunction = NULL;
 		
-		bool failed;
-		String lastError;
-		
+		//Helper functions
+		char* copyCharArray(const char* input, uint16_t maxlen);
 		
 };
 
