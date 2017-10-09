@@ -151,7 +151,7 @@ void onExampleAction() {
 }
 
 //An example condition
-bool onExampleCondition() {
+void onExampleCondition() {
   //Read the argument sent from the homey flow
   int value = Homey.value.toInt();
 
@@ -166,5 +166,5 @@ bool onExampleCondition() {
   }
 
   //Return the result to the Homey flow
-  return result;
+  return Homey.returnResult(result);
 }

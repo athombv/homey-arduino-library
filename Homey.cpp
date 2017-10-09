@@ -4,21 +4,23 @@
 
 HomeyClass::HomeyClass( uint16_t port )
 : _tcpServer(port), _udpServer(), _master_host(0,0,0,0)
-{	//Class constructor
+{
 	_port = port;
-	_name = "";
+	_deviceName = "";
+	_deviceType = DTYPE_UNKNOWN;
 	_master_port = 9999;
 }
 
-void HomeyClass::begin(const String& name)
-{	//Start the servers
-	_name = name;
+void HomeyClass::begin(const String& name, const String& type)
+{
+	_deviceName = name;
+	_deviceType = type;
 	_tcpServer.begin();
 	_udpServer.begin(_port);
 }
 
 void HomeyClass::stop()
-{	//Stop the servers
+{
 	#ifndef CAN_NOT_STOP_TCP
 	_tcpServer.stop();
 	#endif
@@ -26,20 +28,17 @@ void HomeyClass::stop()
 }
 
 void HomeyClass::name(const String& name)
-{	//Set the device identifier
-	_name = name;
+{
+	_deviceName = name;
 }
 
-void HomeyClass::loop()
-{	//Handle incoming connections
-	while (handleUdp()) { yield(); }
-	yield();
-	while (handleTcp()) { yield(); }
-	yield();
+void HomeyClass::type(const String& type)
+{
+	_deviceType = type;
 }
 
 bool HomeyClass::onAction(const String& name, CallbackFunction fn)
-{	//Register an action
+{
 	return on(name.c_str(), TYPE_ACTION, fn);
 }
 
@@ -51,11 +50,6 @@ bool HomeyClass::onCondition(const String& name, CallbackFunction fn)
 bool HomeyClass::onCapability(const String& name, CallbackFunction fn)
 {	//Register a capability
 	return on(name.c_str(), TYPE_CAPABILITY, fn);
-}
-
-bool HomeyClass::on(const String& name, const String& type, CallbackFunction fn)
-{	//Register a custom type
-	return on(name.c_str(), type.c_str(), fn);
 }
 
 HomeyFunction* HomeyClass::findAction(const char* name)
@@ -73,131 +67,204 @@ HomeyFunction* HomeyClass::findCapability(const char* name)
 	return find(name, TYPE_CAPABILITY);
 }
 
-HomeyFunction* HomeyClass::find(const char* name, const char* type)
+bool HomeyClass::removeAction(const char* name)
 {
-	HomeyFunction *item = firstHomeyFunction;
-	
-	if ((name[0]==0)&&(type[0]==0)) return item; //Empty query returns first item (used for "clear" function)
-	
-	while (item!=NULL) {	 
-		uint16_t typelen = strnlen(item->type,MAX_TYPE_LENGTH);
-		uint16_t namelen = strnlen(item->name,MAX_NAME_LENGTH);
-		if ((strncmp(item->type,type,typelen)==0)&&(strncmp(item->name,name,namelen)==0)) {
-			return item;
-		}
-		item = item->nextFunction;
-	}
-	return NULL; //Not found
+	return remove(name, TYPE_ACTION);
 }
 
-bool HomeyClass::remove(const char* name, const char* type)
-{	//Removes an action or condition
-	HomeyFunction* func = find(name, type);
-	if (func==NULL) return false;
-	//DEBUG_PRINTLN("Remove: found");
-	if (func->nextFunction) {
-		//DEBUG_PRINTLN("Remove: stitch next to prev");
-		func->nextFunction->prevFunction = func->prevFunction;
-	}
-	if (func->prevFunction) {
-		//DEBUG_PRINTLN("Remove: stitch prev to next");
-		func->prevFunction->nextFunction = func->nextFunction;
-	} else {
-		//DEBUG_PRINTLN("Remove: is first function");
-		firstHomeyFunction = func->nextFunction;
-	}
-	free(func->name); //de-allocate the char array
-	free(func->type); //de-allocate the char array
-	delete func; //de-allocate the struct itself
-	return true;
+bool HomeyClass::removeCondition(const char* name)
+{
+	return remove(name, TYPE_CONDITION);
+}
+
+bool HomeyClass::removeCapability(const char* name)
+{
+	return remove(name, TYPE_CAPABILITY);
 }
 
 void HomeyClass::clear()
-{	//Deletes all actions and conditions
-	while (remove("","")); //This deletes the whole api...
+{
+	while (remove("","")); //This deletes all endpoints
+}
+
+bool HomeyClass::trigger(const String& name)
+{
+	return _emit(name.c_str(), CTYPE_NULL, "\"\"", TYPE_TRIGGER);
+}
+bool HomeyClass::trigger(const String& name, const char* value)
+{
+	return _emit(name.c_str(), CTYPE_STRING, "\""+String(value)+"\"", TYPE_TRIGGER);
+}
+bool HomeyClass::trigger(const String& name, const String& value)
+{
+	return _emit(name.c_str(), CTYPE_STRING, "\""+value+"\"", TYPE_TRIGGER);
+}
+bool HomeyClass::trigger(const String& name, int value)
+{
+	return _emit(name.c_str(), CTYPE_INT, String(value), TYPE_TRIGGER);
+}
+bool HomeyClass::trigger(const String& name, float value)
+{
+	return _emit(name.c_str(), CTYPE_FLOAT, String(value), TYPE_TRIGGER);
+}
+
+bool HomeyClass::trigger(const String& name, double value)
+{
+	return _emit(name.c_str(), CTYPE_DOUBLE, String(value), TYPE_TRIGGER);
+}
+
+bool HomeyClass::trigger(const String& name, bool value)
+{
+	String str = BVAL_FALSE;
+	if (value) str = BVAL_TRUE;
+	return _emit(name.c_str(), CTYPE_BOOL, str, TYPE_TRIGGER);
+}
+
+bool HomeyClass::setCapabilityValue(const String& name)
+{
+	return _emit(name.c_str(), CTYPE_NULL, "\"\"", TYPE_CAPABILITY);
+}
+bool HomeyClass::setCapabilityValue(const String& name, const char* value)
+{
+	return _emit(name.c_str(), CTYPE_STRING, "\""+String(value)+"\"", TYPE_CAPABILITY);
+}
+bool HomeyClass::setCapabilityValue(const String& name, const String& value)
+{
+	return _emit(name.c_str(), CTYPE_STRING, "\""+value+"\"", TYPE_CAPABILITY);
+}
+bool HomeyClass::setCapabilityValue(const String& name, int value)
+{
+	return _emit(name.c_str(), CTYPE_INT, String(value), TYPE_CAPABILITY);
+}
+bool HomeyClass::setCapabilityValue(const String& name, float value)
+{
+	return _emit(name.c_str(), CTYPE_FLOAT, String(value), TYPE_CAPABILITY);
+}
+
+bool HomeyClass::setCapabilityValue(const String& name, double value)
+{
+	return _emit(name.c_str(), CTYPE_DOUBLE, String(value), TYPE_CAPABILITY);
+}
+
+bool HomeyClass::setCapabilityValue(const String& name, bool value)
+{
+	String str = BVAL_FALSE;
+	if (value) str = BVAL_TRUE;
+	return _emit(name.c_str(), CTYPE_BOOL, str, TYPE_CAPABILITY);
 }
 
 bool HomeyClass::emit(const String& name)
-{	//Emits a trigger to Homey
-	return emit(name.c_str(), "null", "\"\"");
+{
+	return _emit(name.c_str(), CTYPE_NULL, "\"\"", TYPE_RAW);
+}
+bool HomeyClass::emit(const String& name, const char* value)
+{
+	return _emit(name.c_str(), CTYPE_STRING, "\""+String(value)+"\"", TYPE_RAW);
+}
+bool HomeyClass::emit(const String& name, const String& value)
+{
+	return _emit(name.c_str(), CTYPE_STRING, "\""+value+"\"", TYPE_RAW);
+}
+bool HomeyClass::emit(const String& name, int value)
+{
+	return _emit(name.c_str(), CTYPE_INT, String(value), TYPE_RAW);
+}
+bool HomeyClass::emit(const String& name, float value)
+{
+	return _emit(name.c_str(), CTYPE_FLOAT, String(value), TYPE_RAW);
 }
 
-bool HomeyClass::emitText(const String& name, const String& value)
-{	//Emits a trigger with a string argument to Homey
-	return emit(name.c_str(), "String", "\""+value+"\"");
-}
-bool HomeyClass::emitNumber(const String& name, int value)
-{	//Emits a trigger with an integer argument to Homey
-	return emit(name.c_str(), "Number", String(value));
-}
-bool HomeyClass::emitNumber(const String& name, float value)
-{	//Emits a trigger with a float argument to Homey
-	return emit(name.c_str(), "Number", String(value));
+bool HomeyClass::emit(const String& name, double value)
+{
+	return _emit(name.c_str(), CTYPE_FLOAT, String(value), TYPE_RAW);
 }
 
-bool HomeyClass::emitBoolean(const String& name, bool value)
-{	//Emits a trigger with a boolean argument to Homey
-	String str = "false";
-	if (value) str = "true";
-	return emit(name.c_str(), "Boolean", str);
+bool HomeyClass::emit(const String& name, bool value)
+{
+	String str = BVAL_FALSE;
+	if (value) str = BVAL_TRUE;
+	return _emit(name.c_str(), CTYPE_BOOL, str, TYPE_RAW);
 }
 
 void HomeyClass::returnIndex()
-{	//Returns the api index to the Homey app
-	responseCode = 1; //(hack, returns actual index elsewhere)
-	response = "";
-	responseType = "null";
+{
+	_response.code = 1; //(hack, returns actual index elsewhere)
+	_response.response = "";
+	_response.type = CTYPE_NULL;
 }
 
 void HomeyClass::returnNothing()
-{	//Returns an empty result to the Homey app
-	responseCode = 200; //Success
-	response = "";
-	responseType = "null";
+{
+	_response.code = 200; //Success
+	_response.response = "";
+	_response.type = CTYPE_NULL;
 }
 
 void HomeyClass::returnError(const String& error, uint16_t code)
-{	//Returns an error to the Homey app
-	responseCode = code;
-	response = "\""+error+"\"";
-	responseType = "Error";
+{
+	_response.code = code;
+	_response.response = "\""+error+"\"";
+	_response.type = "Error";
 }
 
-void HomeyClass::returnText(const String& result)
-{	//Returns a string result to the Homey app
-	responseCode = 200; //Success
-	response = "\""+result+"\"";
-	responseType = "String";
+void HomeyClass::returnResult(const char* result)
+{
+	_response.code = 200; //Success
+	_response.response = "\""+String(result)+"\"";
+	_response.type = CTYPE_STRING;
 }
 
-void HomeyClass::returnBoolean(bool result)
-{	//Returns a boolean result to the Homey app
-	responseCode = 200; //Success
+void HomeyClass::returnResult(const String& result)
+{
+	_response.code = 200; //Success
+	_response.response = "\""+result+"\"";
+	_response.type = CTYPE_STRING;
+}
+
+void HomeyClass::returnResult(bool result)
+{
+	_response.code = 200; //Success
 	if (result) {
-		response = "true";
+		_response.response = BVAL_TRUE;
 	} else {
-		response = "false";
+		_response.response = BVAL_FALSE;
 	}	
-	responseType = "Boolean";
+	_response.type = "Boolean";
 }
 
-void HomeyClass::returnNumber(int result)
-{	//Returns a number result to the Homey app
-	responseCode = 200; //Success
-	response = String(result);
-	responseType = "Number";
+void HomeyClass::returnResult(int result)
+{
+	_response.code = 200; //Success
+	_response.response = String(result);
+	_response.type = CTYPE_INT;
 }
 
-void HomeyClass::returnNumber(float result)
-{	//Returns a floating point number result to the Homey app
-	responseCode = 200; //Success
-	response = String(result);
-	responseType = "Number";
+void HomeyClass::returnResult(float result)
+{
+	_response.code = 200; //Success
+	_response.response = String(result);
+	_response.type = CTYPE_FLOAT;
+}
+
+void HomeyClass::returnResult(double result)
+{
+	_response.code = 200; //Success
+	_response.response = String(result);
+	_response.type = CTYPE_DOUBLE;
+}
+
+void HomeyClass::loop()
+{
+	while (handleUdp()) { yield(); }
+	yield();
+	while (handleTcp()) { yield(); }
+	yield();
 }
 
 /* PRIVATE FUNCTIONS */
+
 bool HomeyClass::split(char* buffer, char*& a, char*& b, char separator, uint16_t size)
-{	//Helper function that splits a buffer into separate parts
+{
 	a = buffer; //Set to start of buffer
 	b = &buffer[size-1]; //Set to end of buffer
 	
@@ -212,7 +279,17 @@ bool HomeyClass::split(char* buffer, char*& a, char*& b, char separator, uint16_
 	return false; //Separator not found in buffer
 }
 
-bool HomeyClass::parseRequest(CLIENT_TYPE* client) {
+char* HomeyClass::copyCharArray(const char* input, uint16_t maxlen)
+{
+	uint16_t size = strnlen(input, maxlen)+1;
+	if (size>=maxlen) return NULL;
+	char* output = (char*) malloc(size*sizeof(char));
+	if (output==NULL) return NULL;
+	strncpy(output, input, size);
+	return output;
+}
+
+bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 	DEBUG_PRINTLN("-----");
 	memset(_request.endpoint, 0, ENDPOINT_MAX_SIZE);
 	_request.getArgs = "";
@@ -316,19 +393,77 @@ bool HomeyClass::parseRequest(CLIENT_TYPE* client) {
 	return true;
 }
 
-void HomeyClass::runCallback(HomeyFunction* cb, const String& argument) {
-	value = argument; //Make argument accessible for the callback
-	returnNothing(); //This sets the initial response (nothing)
-	if (cb->callback!=NULL) {
-		cb->callback();
-	} else {
-		returnError("Callback not found?", 501);
+bool HomeyClass::on(const char* name, const char* type, CallbackFunction cb) {
+	if (cb==NULL) {DEBUG_PRINTLN("Callback is null"); return false; }
+	
+	char* newType = copyCharArray(type, MAX_TYPE_LENGTH);
+	if (newType==NULL) { DEBUG_PRINTLN("Alloc error for type"); return false; }
+	
+	char* newName = copyCharArray(name, MAX_NAME_LENGTH);
+	if (newName==NULL) { DEBUG_PRINTLN("Alloc error for name"); free(newType); return false; }
+	
+	HomeyFunction *newFunction = new HomeyFunction(newName, newType, cb);
+	if (newFunction==NULL) {
+		DEBUG_PRINTLN("Alloc error for object");
+		free(newType);
+		free(newName);
+		return false;
 	}
+	
+	if (firstHomeyFunction==NULL) {
+		firstHomeyFunction = newFunction;
+	} else {
+		HomeyFunction *next = firstHomeyFunction;
+		HomeyFunction *last = firstHomeyFunction;
+		while (next!=NULL) { last = next; next = last->nextFunction; } //Follow links until end of list
+		newFunction->prevFunction = last; // <
+		last->nextFunction = newFunction; // >  
+	}
+	return true;
 }
 
-String HomeyClass::descCallback(HomeyFunction* cb) {	
-	String desc = "\""+String(cb->name)+"\":\"" + String(cb->type) + "\"";
-	return desc;
+bool HomeyClass::on(const String& name, const String& type, CallbackFunction fn)
+{
+	return on(name.c_str(), type.c_str(), fn);
+}
+
+HomeyFunction* HomeyClass::find(const char* name, const char* type)
+{
+	HomeyFunction *item = firstHomeyFunction;
+	
+	if ((name[0]==0)&&(type[0]==0)) return item; //Empty query returns first item (used for "clear" function)
+	
+	while (item!=NULL) {	 
+		uint16_t typelen = strnlen(item->type,MAX_TYPE_LENGTH);
+		uint16_t namelen = strnlen(item->name,MAX_NAME_LENGTH);
+		if ((strncmp(item->type,type,typelen)==0)&&(strncmp(item->name,name,namelen)==0)) {
+			return item;
+		}
+		item = item->nextFunction;
+	}
+	return NULL; //Not found
+}
+
+bool HomeyClass::remove(const char* name, const char* type)
+{	//Removes an action or condition
+	HomeyFunction* func = find(name, type);
+	if (func==NULL) return false;
+	//DEBUG_PRINTLN("Remove: found");
+	if (func->nextFunction) {
+		//DEBUG_PRINTLN("Remove: stitch next to prev");
+		func->nextFunction->prevFunction = func->prevFunction;
+	}
+	if (func->prevFunction) {
+		//DEBUG_PRINTLN("Remove: stitch prev to next");
+		func->prevFunction->nextFunction = func->nextFunction;
+	} else {
+		//DEBUG_PRINTLN("Remove: is first function");
+		firstHomeyFunction = func->nextFunction;
+	}
+	free(func->name); //de-allocate the char array
+	free(func->type); //de-allocate the char array
+	delete func; //de-allocate the struct itself
+	return true;
 }
 
 void HomeyClass::handleRequest(char* endpoint, const char* argument) {
@@ -347,17 +482,13 @@ void HomeyClass::handleRequest(char* endpoint, const char* argument) {
 				
 		String host = arg_h;
 		uint16_t port = atoi(arg_p);
-		
-		//DEBUG_PRINTLN("Host: "+host);
-		//DEBUG_PRINT("Port: ");
-		//DEBUG_PRINTLN(arg_p);
-		
+				
 		if ((host=="") || (port<1) || (!_master_host.fromString(host) || (!success))) {
 			returnError("invalid argument", 400);
 			return;
 		}
 		_master_port = port;
-		returnBoolean(true);
+		returnResult((bool) true);
 		DEBUG_PRINTLN("Master set to "+host+":"+String(port));
 	} else {
 		char* endpointCompareTo = endpoint+1; //Remove first character
@@ -367,23 +498,101 @@ void HomeyClass::handleRequest(char* endpoint, const char* argument) {
 		split(endpointCompareTo, type, name, '/', ENDPOINT_MAX_SIZE);
 		
 		HomeyFunction* cb = find(name, type);
-		
-		/*for (uint8_t i = 0; i<MAXCALLBACKS; i++) {
-			if (callbacks[i]) {
-				uint8_t l = strnlen(callbacks[i]->name, ENDPOINT_MAX_SIZE)+1;
-				if (strncmp(endpointCompareTo,callbacks[i]->name, l)==0) {
-					cb = callbacks[i];
-					break;
-				}
-			}
-		}*/
-		
+				
 		if (cb==NULL) {
 			returnError("unknown call", 404);
 		} else {
-			runCallback(cb, String(argument));
+			value = argument;
+			returnNothing();
+			cb->callback();
 		}
 	}
+}
+
+bool HomeyClass::handleTcp() {
+	CLIENT_TYPE client = _tcpServer.available();
+	if (client) {
+		bool valid = parseHttpHeaders(&client);
+		if (client.connected()) {
+			bool sendIndex = false;
+			if (!valid) {
+				returnError("Could not parse request", 400);
+			} else {
+				if (_request.postArgs.length()>0) {
+					DEBUG_PRINTLN("Handled as post request");
+					handleRequest(_request.endpoint, _request.postArgs.c_str());
+				} else {
+					DEBUG_PRINTLN("Handled as get request");
+					handleRequest(_request.endpoint, _request.getArgs.c_str());
+				}
+				
+				if (_response.code==1) {
+					sendIndex = true;
+					_response.code = 200;
+				}
+			}
+			
+			const char* desc;
+			if (_response.code==400) {
+				desc = "Bad Request";
+			} else if (_response.code==404) {
+				desc = "Not Found";
+			} else if (_response.code==500) {
+				desc = "Internal Server Error";
+			} else if (_response.code==501) {
+				desc = "Not Implemented";
+			} else {
+				_response.code = 200;
+				desc = "OK";
+			}
+			
+			client.print("HTTP/1.1 ");
+			client.print(_response.code);
+			client.print(' ');
+			client.println(desc);
+			client.println("Content-Type: application/json");
+			client.println("Connection: close");
+			client.println();
+						
+			if (sendIndex) {			
+				client.print("{\"id\":\"");
+				client.print( _deviceName);
+				client.print(",\"type\":\"");
+				client.print( _deviceType);
+				client.print("\",\"master\":{\"host\":\"");
+				client.print(_master_host);
+				client.print("\", \"port\":");
+				client.print(_master_port);
+				client.print("},\"api\":{");
+				uint16_t i = 0;
+				HomeyFunction *item = firstHomeyFunction;
+				while (item!=NULL) {
+					client.print("\"");
+					client.print(i);
+					client.print("\":{\"name\":\"");
+					client.print(item->name);
+					client.print("\", \"type\":\"");
+					client.print(item->type);
+					client.print("\"}");
+					item = item->nextFunction;
+					if (item!=NULL) client.print(',');
+					i++;
+				}
+				client.print("}}");
+			} else {
+				client.print("{\"type\":\"");
+				client.print(_response.type);
+				client.print("\",\"result\":");
+				if (_response.response=="") _response.response = "\"\"";
+				client.print(_response.response);
+				client.print("}");
+			}
+		}
+		client.stop();
+		yield();
+		return true;
+	}
+	return false;
 }
 
 bool HomeyClass::handleUdp() {
@@ -408,9 +617,11 @@ bool HomeyClass::handleUdp() {
 		handleRequest(endpoint, argument);
 
 		_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
-		if (responseCode==1) { //Return the index
+		if (_response.code==1) { //Return the index
 			_udpServer.print("{\"id\":\"");
-			_udpServer.print( _name);
+			_udpServer.print( _deviceName);
+			_udpServer.print(",\"type\":\"");
+			_udpServer.print( _deviceType);
 			_udpServer.print("\",\"master\":{\"host\":\"");
 			_udpServer.print(_master_host);
 			_udpServer.print("\", \"port\":");
@@ -434,10 +645,10 @@ bool HomeyClass::handleUdp() {
 			
 		} else {
 			_udpServer.print("{\"type\":\"");
-			_udpServer.print(responseType);
+			_udpServer.print(_response.type);
 			_udpServer.print("\",\"result\":");
-			if (response=="") response = "\"\"";
-			_udpServer.print(response);
+			if (_response.response=="") _response.response = "\"\"";
+			_udpServer.print(_response.response);
 			_udpServer.print("}");
 		}
 		_udpServer.endPacket();
@@ -446,154 +657,7 @@ bool HomeyClass::handleUdp() {
 	return false; //Handle TCP next
 }
 
-bool HomeyClass::handleTcp() {
-	CLIENT_TYPE client = _tcpServer.available();
-	if (client) {
-		bool valid = parseRequest(&client);
-		if (client.connected()) {
-			bool sendIndex = false;
-			if (!valid) {
-				returnError("Could not parse request", 400);
-			} else {
-				if (_request.postArgs.length()>0) {
-					DEBUG_PRINTLN("Handled as post request");
-					handleRequest(_request.endpoint, _request.postArgs.c_str());
-				} else {
-					DEBUG_PRINTLN("Handled as get request");
-					handleRequest(_request.endpoint, _request.getArgs.c_str());
-				}
-				
-				if (responseCode==1) {
-					sendIndex = true;
-					responseCode = 200;
-				}
-			}
-			
-			const char* desc;
-			if (responseCode==400) {
-				desc = "Bad Request";
-			} else if (responseCode==404) {
-				desc = "Not Found";
-			} else if (responseCode==500) {
-				desc = "Internal Server Error";
-			} else if (responseCode==501) {
-				desc = "Not Implemented";
-			} else {
-				responseCode = 200;
-				desc = "OK";
-			}
-			
-			client.print("HTTP/1.1 ");
-			client.print(responseCode);
-			client.print(' ');
-			client.println(desc);
-			client.println("Content-Type: application/json");
-			client.println("Connection: close");
-			client.println();
-						
-			if (sendIndex) {			
-				client.print("{\"id\":\"");
-				client.print( _name);
-				client.print("\",\"master\":{\"host\":\"");
-				client.print(_master_host);
-				client.print("\", \"port\":");
-				client.print(_master_port);
-				client.print("},\"api\":{");
-				uint16_t i = 0;
-				HomeyFunction *item = firstHomeyFunction;
-				while (item!=NULL) {
-					client.print("\"");
-					client.print(i);
-					client.print("\":{\"name\":\"");
-					client.print(item->name);
-					client.print("\", \"type\":\"");
-					client.print(item->type);
-					client.print("\"}");
-					item = item->nextFunction;
-					if (item!=NULL) client.print(',');
-					i++;
-				}
-				client.print("}}");
-			} else {
-				client.print("{\"type\":\"");
-				client.print(responseType);
-				client.print("\",\"result\":");
-				if (response=="") response = "\"\"";
-				client.print(response);
-				client.print("}");
-			}
-		}
-		client.stop();
-		yield();
-		return true;
-	}
-	return false;
-}
-
-bool HomeyClass::on(const char* name, const char* type, CallbackFunction cb) {
-  char* newType = copyCharArray(type, MAX_TYPE_LENGTH);
-  if (newType==NULL) {
-	  DEBUG_PRINTLN("Alloc error for type");
-	  return false;
-  }
-  char* newName = copyCharArray(name, MAX_NAME_LENGTH);
-  if (newName==NULL) {
-	  DEBUG_PRINTLN("Alloc error for name");
-	  free(newType);
-	  return false;
-  }
-  
-  HomeyFunction *newFunction = new HomeyFunction(newName, newType, cb);
-  
-  if (newFunction==NULL) {
-	DEBUG_PRINTLN("Alloc error for object");
-	free(newType);
-	free(newName);
-	return false;
-  }
-  
-  if (firstHomeyFunction==NULL) {
-	  firstHomeyFunction = newFunction;
-	  DEBUG_PRINTLN("Created first.");
-	  return true;
-  }
-  
-  HomeyFunction *next = firstHomeyFunction;
-  HomeyFunction *last = firstHomeyFunction;
-  
-  while (next!=NULL) {
-	  last = next;
-	  DEBUG_PRINT("List: '");
-	  DEBUG_PRINT(last->name);
-	  DEBUG_PRINT("' ('");
-	  DEBUG_PRINT(last->type);
-	  DEBUG_PRINTLN("')");
-	  next = last->nextFunction;
-  }
-  
-  newFunction->prevFunction = last; // <
-  last->nextFunction = newFunction; // >
-  
-  
-  DEBUG_PRINTLN("Created new.");
-    
-  return true;
-}
-
-/*HomeyFunction* HomeyClass::createEmptyCallback(const String& name) {
-	HomeyFunction *cb = new HomeyFunction;
-	name.toCharArray(cb->name, ENDPOINT_MAX_SIZE);
-	
-	for (uint8_t i = 0; i<strlen(cb->name)-1; i++) { //Replace spaces with underscores
-		if (cb->name[i]==' ') cb->name[i] = '_';
-	}
-	
-	cb->fnVoid = NULL;
-	cb->fnBool = NULL;
-	return cb;
-}*/
-
-bool HomeyClass::emit(const char* name, const char* type, const String& triggerValue) {
+bool HomeyClass::_emit(const char* name, const char* argType, const String& triggerValue, const char* evType) {
 	yield();
 	if (_master_host[0]==0) return false; //Master IP not set: this function is doomed to fail so exit
 	CLIENT_TYPE client;
@@ -607,18 +671,18 @@ bool HomeyClass::emit(const char* name, const char* type, const String& triggerV
 		
 		client.print("Content-Length: ");
 		//client.println(postData.length());
-		client.println(12+9+2+strlen(type)+triggerValue.length());
+		client.println(9+12+12+2+strlen(evType)+strlen(argType)+triggerValue.length());
 		
 		client.println("Connection: close");
 		client.println();
-		//client.println(postData);
+		client.print(",\"type\":\""); //9
+		client.print(evType);
+		client.print(",\"argType\":\""); //12
+		client.print(argType);
 		client.print("{\"argument\":"); //12
 		client.print(triggerValue);
-		client.print(",\"type\":\""); //9
-		client.print(type);
 		client.println("\"}"); //2
 		
-		//FOR ESP8266 ONLY
 		uint8_t timeout = 100;
 		while (client.available()==0) {
 			delay(1);
@@ -633,8 +697,8 @@ bool HomeyClass::emit(const char* name, const char* type, const String& triggerV
 			response += c;
 		}
 		
-		//DEBUG_PRINT("Trigger response: ");
-		//DEBUG_PRINTLN(response);
+		DEBUG_PRINT("Emit response: ");
+		DEBUG_PRINTLN(response);
 		
 		client.stop();
 		yield();
@@ -644,20 +708,10 @@ bool HomeyClass::emit(const char* name, const char* type, const String& triggerV
 	return false;
 }
 
-char* HomeyClass::copyCharArray(const char* input, uint16_t maxlen)
-{	//Allocate memory for a char array and copy input
-	uint16_t size = strnlen(input, maxlen)+1;
-	if (size>=maxlen) return NULL;
-	char* output = (char*) malloc(size*sizeof(char));
-	if (output==NULL) return NULL;
-	strncpy(output, input, size);
-	return output;
-}
-
 /* STRUCT CONSTRUCTORS */
 
 HomeyFunction::HomeyFunction(char* newName, char* newType, CallbackFunction newCallback)
-{	//Struct constructor
+{
 	prevFunction = NULL;
 	nextFunction = NULL;
 	type = newType;

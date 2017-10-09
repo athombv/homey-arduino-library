@@ -131,20 +131,20 @@ void onPumpOffAction() {
 }
 
 //Condition: Sensor 1 has enough water
-bool onSensor1HasWaterCondition() {
+void onSensor1HasWaterCondition() {
   int threshold = Homey.value.toInt();  //Read the value received from Homey
   int value = analogRead(HUM_SENSOR_1); //Read the sensor value
-  return value >= threshold;            //Return the boolean result of the comparison
+  return Homey.returnResult(value >= threshold);            //Return the boolean result of the comparison
 }
 
 //Condition: Sensor 2 has enough water
-bool onSensor2HasWaterCondition() {
+void onSensor2HasWaterCondition() {
   int threshold = Homey.value.toInt();  //Read the value received from Homey
   int value = analogRead(HUM_SENSOR_2); //Read the sensor value
-  return value >= threshold;            //Return the boolean result of the comparison
+  return Homey.returnResult(value >= threshold);            //Return the boolean result of the comparison
 }
 
 //Condition: there is enough water in the tank
-bool onHasWaterCondition() {
-  return digitalRead(PIN_FLOAT);        //Return the state of the float sensor
+void onHasWaterCondition() {
+  return Homey.returnResult(digitalRead(PIN_FLOAT));        //Return the state of the float sensor
 }

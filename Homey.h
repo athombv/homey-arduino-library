@@ -21,10 +21,25 @@
 #define MAX_NAME_LENGTH 32
 #define MAX_TYPE_LENGTH 32
 
-#define TYPE_ACTION "act"
-#define TYPE_CONDITION "con"
-#define TYPE_CAPABILITY "cap"
-#define TYPE_SYSTEM "sys"
+#define TYPE_ACTION 		"act"
+#define TYPE_CONDITION		"con"
+#define TYPE_CAPABILITY		"cap"
+#define TYPE_SYSTEM			"sys"
+#define TYPE_TRIGGER		"trg"
+#define TYPE_RAW			"raw"	//Not handled by Homeyduino app!
+
+#define CTYPE_NULL			"null"
+#define CTYPE_STRING		"String"
+#define CTYPE_INT			"Number"
+#define CTYPE_FLOAT			"Number"
+#define CTYPE_DOUBLE		"Number"
+#define CTYPE_BOOL			"Boolean"
+
+#define BVAL_TRUE			"true"
+#define BVAL_FALSE			"false"
+
+#define DTYPE_UNKNOWN		"unknown"		//Unconfigured device
+#define DTYPE_HOMEYDUINO 	"homeyduino"	//Homeyduino device
 
 #define ENDPOINT_SET_MASTER "/sys/setmaster"
 
@@ -75,11 +90,9 @@
 #endif
 
 //Type definitions
-//typedef void (*ActionCallback)(void);
-//typedef bool (*ConditionCallback)(void);
-
 typedef void (*CallbackFunction)(void);
 
+//Struct definitions
 struct HomeyFunction {
 	HomeyFunction(char* newName, char* newType, CallbackFunction newCallback);
 	HomeyFunction* prevFunction;	//Linked list (<)
@@ -91,7 +104,8 @@ struct HomeyFunction {
 
 struct WebResponse {
 	uint16_t code;
-	const char* result;
+	String response;
+	String type;
 };
 
 struct WebRequest {
@@ -102,113 +116,104 @@ struct WebRequest {
 
 class HomeyClass {
 	public:
-		//Class constructor
-		HomeyClass( uint16_t port = 46639 ); //46639 = HOMEY
+		//Library and device management
+		HomeyClass( uint16_t port = 46639 ); 									//Class constructor (port 46639 is t9 for HOMEY)
+		void begin(const String& name, const String& type = DTYPE_HOMEYDUINO);	//Start responding to queries
+		void stop();															//Stop responding to queries
+		void name(const String& name);											//Change the device identifier
+		void type(const String& type);											//Change the device type
 		
-		//Start the servers
-		void begin(const String& name);
+		//API endpoint management
+		bool onAction(const String& name, CallbackFunction fn);					//Wrapper for on(String&, String&,...) that supplies type as TYPE_ACTION
+		bool onCondition(const String& name, CallbackFunction fn);				//Wrapper for on(String&, String&,...) that supplies type as TYPE_CONDITION
+		bool onCapability(const String& name, CallbackFunction fn);				//Wrapper for on(String&, String&,...) that supplies type as TYPE_CAPABILITY
+		HomeyFunction* findAction(const char* name);							//Wrapper for find(...) that supplies type as TYPE_ACTION
+		HomeyFunction* findCondition(const char* name);							//Wrapper for find(...) that supplies type as TYPE_CONDITION
+		HomeyFunction* findCapability(const char* name);						//Wrapper for find(...) that supplies type as TYPE_CAPABILITY
+		bool removeAction(const char* name);									//Wrapper for remove(...) that supplies type as TYPE_ACTION
+		bool removeCondition(const char* name);									//Wrapper for remove(...) that supplies type as TYPE_CONDITION
+		bool removeCapability(const char* name);								//Wrapper for remove(...) that supplies type as TYPE_CAPABILITY
+		void clear();															//Removes all endpoints
+				
+		//Send a trigger event to a Homey flow
+		bool trigger(const String& name);										//Wrapper for emit(...) with NULL argument and type set to trigger
+		bool trigger(const String& name, const char* value);					//Wrapper for emit(...) with char array argument and type set to trigger
+		bool trigger(const String& name, const String& value);					//Wrapper for emit(...) with String argument and type set to trigger
+		bool trigger(const String& name, bool value);							//Wrapper for emit(...) with bool argument and type set to trigger
+		bool trigger(const String& name, int value);							//Wrapper for emit(...) with int argument and type set to trigger
+		bool trigger(const String& name, float value);							//Wrapper for emit(...) with float argument and type set to trigger
+		bool trigger(const String& name, double value);							//Wrapper for emit(...) with double argument and type set to trigger
 		
-		//Stop the servers
-		void stop();
 		
-		//Set the device identifier
-		void name(const String& name);
+		//Update a capability value
+		bool setCapabilityValue(const String& name);							//Wrapper for emit(...) with NULL argument and type set to capability
+		bool setCapabilityValue(const String& name, const char* value);			//Wrapper for emit(...) with char array argument type set to capability
+		bool setCapabilityValue(const String& name, const String& value);		//Wrapper for emit(...) with String argument type set to capability
+		bool setCapabilityValue(const String& name, bool value);				//Wrapper for emit(...) with bool argument type set to capability
+		bool setCapabilityValue(const String& name, int value);					//Wrapper for emit(...) with int argument type set to capability
+		bool setCapabilityValue(const String& name, float value);				//Wrapper for emit(...) with float argument type set to capability
+		bool setCapabilityValue(const String& name, double value);				//Wrapper for emit(...) with double argument type set to capability
+		
+		//Send a raw event (not handled by Homeyduino app!)
+		bool emit(const String& name);											//Wrapper for emit(...) with NULL argument and type set to raw
+		bool emit(const String& name, const char* value);						//Wrapper for emit(...) with char array argument type set to raw
+		bool emit(const String& name, const String& value);						//Wrapper for emit(...) with String argument type set to raw
+		bool emit(const String& name, bool value);								//Wrapper for emit(...) with bool argument type set to raw
+		bool emit(const String& name, int value);								//Wrapper for emit(...) with int argument type set to raw
+		bool emit(const String& name, float value);								//Wrapper for emit(...) with float argument type set to raw
+		bool emit(const String& name, double value);							//Wrapper for emit(...) with double argument type set to raw
+		
+		//Set the answer returned from within an api endpoint
+		void returnIndex();														//Return the API index
+		void returnNothing();													//Return nothing
+		void returnError(const String& error, uint16_t code = 500);				//Return an error message
+		void returnResult(const char* result);									//Return a Char array
+		void returnResult(const String& result);								//Return a String
+		void returnResult(bool result);											//Return a bool
+		void returnResult(int result);											//Return an int
+		void returnResult(float result);										//Return a float
+		void returnResult(double result);										//Return a double
 		
 		//Handle incoming connections
-		void loop();
+		void loop();															//Wrapper that runs both TCP and UDP handlers
 		
-		//Register api calls
-		bool onAction(const String& name, CallbackFunction fn);
-		bool onCondition(const String& name, CallbackFunction fn);
-		bool onCapability(const String& name, CallbackFunction fn);
-		bool on(const String& name, const String& type, CallbackFunction fn);
-		
-		//Finding api calls
-		HomeyFunction* findAction(const char* name);
-		HomeyFunction* findCondition(const char* name);
-		HomeyFunction* findCapability(const char* name);
-		HomeyFunction* find(const char* name, const char* type);
-		
-		//Remove api calls
-		bool remove(const char* name, const char* type);
-		
-		//Deletes all actions and conditions
-		void clear();
-		
-		//Emits a trigger to Homey
-		bool emit(const String& name);
-		
-		//Emit a trigger to Homey
-		bool emitText(const String& name, const String& value);
-		bool emitNumber(const String& name, int value);
-		bool emitNumber(const String& name, float value);
-		bool emitBoolean(const String& name, bool value);
-		
-		//Returns a result to Homey
-		void returnIndex();
-		void returnNothing();
-		void returnError(const String& error, uint16_t code = 500);
-		void returnText(const String& result);
-		void returnBoolean(bool result);
-		void returnNumber(int result);
-		void returnNumber(float result);
-		
-		//Handle incoming TCP connections
-		bool handleTcp();
-		
-		//Handle incoming UDP connections
-		bool handleUdp();
-		
-		//The argument supplied by the Homey flow
-		String value;
+		//Public variables
+		String value;															//The argument supplied by the Homey flow
 		
 	private:
-		//Helper function that splits a buffer separate parts
-		bool split(char* buffer, char*& a, char*& b, char separator, uint16_t size);
-		
-		//The TCP server
-		TCP_SERVER_TYPE _tcpServer;
-		
-		//The UDP server
-		UDP_SERVER_TYPE _udpServer;
-		
-		//The listening port for incoming connections
-		uint16_t _port;
-		
-		//The device identifier
-		String _name;
-				
-		//The registered actions and conditions
-		HomeyFunction *callbacks[MAXCALLBACKS];
-		
-		WebRequest _request;
-		
-		//Response
-		String response;
-		String responseType;
-		uint16_t responseCode;
-				
-		bool on(const char* name, const char* type, CallbackFunction cb);		
-		
-		bool parseRequest(CLIENT_TYPE* client);	
-		
-		void runCallback(HomeyFunction* cb, const String& argument);
-		String descCallback(HomeyFunction* cb);
-		void handleRequest(char* endpoint, const char* argument);
-		
-		//HomeyFunction* createEmptyCallback(const String& name);
-
-		IPAddress _master_host;
-		uint16_t _master_port;
-		
-		bool emit(const char* name, const char* type, const String& value);
-				
-		//Linked list entrypoints
-		HomeyFunction* firstHomeyFunction = NULL;
-		
 		//Helper functions
-		char* copyCharArray(const char* input, uint16_t maxlen);
+		bool split(char* buffer, char*& a, char*& b, char separator,			//Splits a buffer into separate parts
+		uint16_t size);				
+		char* copyCharArray(const char* input, uint16_t maxlen);				//Allocates memory and copies a char array
+		bool parseHttpHeaders(CLIENT_TYPE* client);								//Parse HTTP headers and fill _request
 		
+		//API endpoint management
+		bool on(const char* name, const char* type, CallbackFunction cb);		//Create an endpoint
+		bool on(const String& name, const String& type, CallbackFunction fn);	//Wrapper for on(char*,char*,...) to allow for supplying string arguments
+		HomeyFunction* find(const char* name, const char* type);				//Find an endpoint
+		bool remove(const char* name, const char* type);						//Remove an endpoint
+
+		//Request handling
+		void handleRequest(char* endpoint, const char* argument);				//Handle API call
+		bool handleTcp();														//Handle incoming TCP connections
+		bool handleUdp();														//Handle incoming UDP connections
+				
+		//Event transmission
+		bool _emit(const char* name, const char* argType, const String& value,	//Emit an event
+		const char* evType);
+				
+		//Internal variables
+		TCP_SERVER_TYPE _tcpServer;												//The TCP server
+		UDP_SERVER_TYPE _udpServer;												//The UDP server
+		uint16_t _port;															//The listening port for incoming connections
+		String _deviceName;														//The device identifier
+		String _deviceType;														//The device type
+		HomeyFunction *callbacks[MAXCALLBACKS];									//The registered actions and conditions
+		WebRequest _request;													//API request parameter storage
+		WebResponse _response;													//API response parameter storage
+		IPAddress _master_host;													//Master IP address
+		uint16_t _master_port;													//Master port
+		HomeyFunction* firstHomeyFunction = NULL;								//API callbacks linked list entry point
 };
 
 extern HomeyClass Homey;
