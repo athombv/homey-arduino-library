@@ -229,7 +229,7 @@ void HomeyClass::returnResult(bool result)
 	} else {
 		_response.response = BVAL_FALSE;
 	}	
-	_response.type = "Boolean";
+	_response.type = CTYPE_BOOL;
 }
 
 void HomeyClass::returnResult(int result)
@@ -557,7 +557,7 @@ bool HomeyClass::handleTcp() {
 			if (sendIndex) {			
 				client.print("{\"id\":\"");
 				client.print( _deviceName);
-				client.print(",\"type\":\"");
+				client.print("\",\"type\":\"");
 				client.print( _deviceType);
 				client.print("\",\"master\":{\"host\":\"");
 				client.print(_master_host);
@@ -620,7 +620,7 @@ bool HomeyClass::handleUdp() {
 		if (_response.code==1) { //Return the index
 			_udpServer.print("{\"id\":\"");
 			_udpServer.print( _deviceName);
-			_udpServer.print(",\"type\":\"");
+			_udpServer.print("\",\"type\":\"");
 			_udpServer.print( _deviceType);
 			_udpServer.print("\",\"master\":{\"host\":\"");
 			_udpServer.print(_master_host);
@@ -662,7 +662,13 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 	if (_master_host[0]==0) return false; //Master IP not set: this function is doomed to fail so exit
 	CLIENT_TYPE client;
 	if (client.connect(_master_host, _master_port)) {
-		client.print("POST /trigger/");
+		DEBUG_PRINT("Emit query: ");
+		DEBUG_PRINT(evType);
+		DEBUG_PRINT('/');
+		DEBUG_PRINTLN(name);
+		client.print("POST /");
+		client.print(evType);
+		client.print('/');
 		client.print(name);
 		client.println(" HTTP/1.1");
 		
@@ -671,17 +677,15 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 		
 		client.print("Content-Length: ");
 		//client.println(postData.length());
-		client.println(9+12+12+2+strlen(evType)+strlen(argType)+triggerValue.length());
+		client.println(9+13+1+strlen(evType)+strlen(argType)+triggerValue.length());
 		
 		client.println("Connection: close");
 		client.println();
-		client.print(",\"type\":\""); //9
-		client.print(evType);
-		client.print(",\"argType\":\""); //12
+		client.print("{\"type\":\""); //9
 		client.print(argType);
-		client.print("{\"argument\":"); //12
+		client.print("\",\"argument\":"); //13
 		client.print(triggerValue);
-		client.println("\"}"); //2
+		client.println("}"); //1
 		
 		uint8_t timeout = 100;
 		while (client.available()==0) {
