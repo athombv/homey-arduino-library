@@ -94,11 +94,13 @@ typedef void (*CallbackFunction)(void);
 
 //Struct definitions
 struct HomeyFunction {
-	HomeyFunction(char* newName, char* newType, CallbackFunction newCallback);
+	HomeyFunction(char* newName, char* newType, CallbackFunction newCallback, bool needsValue = false);
 	HomeyFunction* prevFunction;	//Linked list (<)
 	HomeyFunction* nextFunction;	//Linked list (>)
-	char* type;				//Type
-	char* name;				//Name
+	char* type;						//Type
+	char* name;						//Name
+	String* valueType;				//Type of value (if needed)
+	String* value;					//Value (if needed) (formatted!)
 	CallbackFunction callback;		//Function pointer
 };
 
@@ -109,9 +111,9 @@ struct WebResponse {
 };
 
 struct WebRequest {
-	char endpoint[ENDPOINT_MAX_SIZE];
-	String getArgs;
-	String postArgs;
+	String endpoint;
+	String args;
+	bool isPost; //False: GET, True: POST
 };
 
 class HomeyClass {
@@ -124,9 +126,9 @@ class HomeyClass {
 		void type(const String& type);											//Change the device type
 		
 		//API endpoint management
-		bool onAction(const String& name, CallbackFunction fn);					//Wrapper for on(String&, String&,...) that supplies type as TYPE_ACTION
-		bool onCondition(const String& name, CallbackFunction fn);				//Wrapper for on(String&, String&,...) that supplies type as TYPE_CONDITION
-		bool onCapability(const String& name, CallbackFunction fn);				//Wrapper for on(String&, String&,...) that supplies type as TYPE_CAPABILITY
+		bool addAction(const String& name, CallbackFunction fn);				//Wrapper for on(String&, String&,...) that supplies type as TYPE_ACTION
+		bool addCondition(const String& name, CallbackFunction fn);				//Wrapper for on(String&, String&,...) that supplies type as TYPE_CONDITION
+		bool addCapability(const String& name, CallbackFunction fn = NULL);		//Wrapper for on(String&, String&,...) that supplies type as TYPE_CAPABILITY
 		HomeyFunction* findAction(const char* name);							//Wrapper for find(...) that supplies type as TYPE_ACTION
 		HomeyFunction* findCondition(const char* name);							//Wrapper for find(...) that supplies type as TYPE_CONDITION
 		HomeyFunction* findCapability(const char* name);						//Wrapper for find(...) that supplies type as TYPE_CAPABILITY
@@ -163,7 +165,7 @@ class HomeyClass {
 		bool emit(const String& name, float value);								//Wrapper for emit(...) with float argument type set to raw
 		bool emit(const String& name, double value);							//Wrapper for emit(...) with double argument type set to raw
 		
-		//Set the answer returned from within an api endpoint
+		//Set the answer returned
 		void returnIndex();														//Return the API index
 		void returnNothing();													//Return nothing
 		void returnError(const String& error, uint16_t code = 500);				//Return an error message
@@ -188,19 +190,23 @@ class HomeyClass {
 		bool parseHttpHeaders(CLIENT_TYPE* client);								//Parse HTTP headers and fill _request
 		
 		//API endpoint management
-		bool on(const char* name, const char* type, CallbackFunction cb);		//Create an endpoint
+		bool on(const char* name, const char* type, CallbackFunction cb,		//Create an endpoint
+				bool needsValue = false);
 		bool on(const String& name, const String& type, CallbackFunction fn);	//Wrapper for on(char*,char*,...) to allow for supplying string arguments
 		HomeyFunction* find(const char* name, const char* type);				//Find an endpoint
 		bool remove(const char* name, const char* type);						//Remove an endpoint
 
 		//Request handling
-		void handleRequest(char* endpoint, const char* argument);				//Handle API call
+		void handleRequest();													//Handle API call
 		bool handleTcp();														//Handle incoming TCP connections
 		bool handleUdp();														//Handle incoming UDP connections
 				
 		//Event transmission
 		bool _emit(const char* name, const char* argType, const String& value,	//Emit an event
 		const char* evType);
+		
+		//Set the answer returned
+		void returnResult(const String& response, const String& type);				//Set the return value
 				
 		//Internal variables
 		TCP_SERVER_TYPE _tcpServer;												//The TCP server
