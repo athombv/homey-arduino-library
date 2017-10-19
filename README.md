@@ -10,7 +10,4 @@ The library should work on most official Arduino boards, ESP8266 based boards an
 When using an Arduino board both the official ethernet shield version 1 and 2 are supported.
 
 # Using the library
-See the included examples.
-
-# KNOWN BUGS
-Out-of-memory related crashes on ESP8266 based boards.
+See the included examples and the readme of the app repository at https://github.com/athombv/com.athom.arduino
