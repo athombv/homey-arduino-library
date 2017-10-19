@@ -44,12 +44,12 @@ bool HomeyClass::addAction(const String& name, CallbackFunction fn)
 
 bool HomeyClass::addCondition(const String& name, CallbackFunction fn)
 {	//Register a condition
-	return on(name.c_str(), TYPE_CONDITION, fn, true);
+	return on(name.c_str(), TYPE_CONDITION, fn);
 }
 
 bool HomeyClass::addCapability(const String& name, CallbackFunction fn)
 {	//Register a capability
-	return on(name.c_str(), TYPE_CAPABILITY, fn);
+	return on(name.c_str(), TYPE_CAPABILITY, fn, true);
 }
 
 HomeyFunction* HomeyClass::findAction(const char* name)
@@ -514,8 +514,18 @@ void HomeyClass::handleRequest() {
 				function->callback();
 			}
 		} else { //GET request
-			if (function->value==NULL) {
-				returnError("not gettable", 400);
+			if (function->value==NULL) { //Try returning the current value first (used for capabilities)
+				#ifdef ENABLE_GET_CALL_CB
+				if (function->callback==NULL) {
+				#endif
+					returnError("not gettable", 400); //Return error
+				#ifdef ENABLE_GET_CALL_CB
+				} else { //Else try to run the callback even though it is a get request
+					value = _request.args;
+					returnNothing(); //Leave the answer up to the callback
+					function->callback();
+				}
+				#endif
 			} else {
 				returnResult(*(function->value), *(function->valueType));
 			}
