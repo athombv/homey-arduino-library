@@ -40,20 +40,20 @@ void setup() {
   */
 
   //Register an example action
-  Homey.onAction("myaction", onExampleAction);
+  Homey.addAction("myaction", onExampleAction);
 
   //Register an example condition
-  Homey.onCondition("mycondition", onExampleCondition);
+  Homey.addCondition("mycondition", onExampleCondition);
 
   /* Note:
-      Names of actions and conditions can be at most 16 characters long.
-      Names of both actions and conditions have to be unique on this device,
-      which means that there can not be a condition and an action with the
-      same name on the same device.
-
-      An action is a function which returnes 'void'. While a condition is a function
-      which returns a boolean ('bool').
-  */
+   *  Names of actions and conditions can be at most 16 characters long.
+   *  Names of both actions and conditions have to be unique on this device,
+   *  which means that there can not be a condition and an action with the
+   *  same name on the same device.
+   *  
+   *  An action is a function which returnes 'void'. While a condition is a function
+   *  which returns a boolean ('bool').
+   */
 
   Serial.println("Started.");
 }
@@ -62,42 +62,42 @@ void loop() {
   //Handle incoming connections
   Homey.loop();
   /* Note:
-      The Homey.loop(); function needs to be called as often as possible.
-      Failing to do so will cause connection problems and instability.
-      Avoid using the delay function at all times. Instead please use the
-      method explaind on the following page on the Arduino website:
-      https://www.arduino.cc/en/Tutorial/BlinkWithoutDelay
-  */
+   *  The Homey.loop(); function needs to be called as often as possible.
+   *  Failing to do so will cause connection problems and instability.
+   *  Avoid using the delay function at all times. Instead please use the
+   *  method explaind on the following page on the Arduino website:
+   *  https://www.arduino.cc/en/Tutorial/BlinkWithoutDelay
+   */
 
   //This is the 'blink without delay' code
   unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis > interval) {
+  if(currentMillis - previousMillis > interval) {
     previousMillis = currentMillis;
 
     //(This code will be executed every <interval> milliseconds.)
 
     //Emit a trigger to Homey
-    bool success = Homey.emitText("mytrigger", "Hello world");
+    bool success = Homey.trigger("mytrigger", "Hello world");
     /* Note:
-        The first argument to the emit function is the name of the trigger
-        this name has to match the name used in the flow editor
-
-        The second argument to the emit function is the argument.
-        An argument can be one of the following:
-         - a string ( Homey.emitText(<name>,<argument>); )
-         - an integer (int) ( Homey.emitNumber(<name,<argument>); )
-         - a floating point number ( Homey.emitNumber(<name>,<argument>); )
-         - a boolean ( Homey.emitBoolean(<name>,<argument>); )
-         - nothing ( Homey.emit(<name>); )
-
-        Make sure to select the right type of flow card to match the type
-        of argument sent to Homey.
-        For a string argument the "text" flowcard is used.
-        For an integer or floating point number the "number" flowcard is used.
-        For the boolean argument the "boolean" flowcard is used.
-        And when no argument is supplied the flowcard without argument is used.
-
-    */
+     *  The first argument to the emit function is the name of the trigger  
+     *  this name has to match the name used in the flow editor
+     *  
+     *  The second argument to the emit function is the argument.
+     *  An argument can be one of the following:
+     *     - a string
+     *     - an integer (int)
+     *     - a floating point number (float or double),
+     *     - a boolean (bool)
+     *     - nothing (void)
+     *  
+     *  Make sure to select the right type of flow card to match the type
+     *  of argument sent to Homey.
+     *  For a string argument the "text" flowcard is used.
+     *  For an integer or floating point number the "number" flowcard is used.
+     *  For the boolean argument the "boolean" flowcard is used.
+     *  And when no argument is supplied the flowcard without argument is used.
+     *  
+     */
 
     //And print the result to the serial terminal
     Serial.print("Result: ");
@@ -107,11 +107,11 @@ void loop() {
       Serial.println("failure");
     }
     /* Note:
-        At first you will see "Result: failure" a lot in the serial monitor
-        This is expected behaviour when the device has not yet been paired with
-        a Homey.
-    */
-
+     *  At first you will see "Result: failure" a lot in the serial monitor
+     *  This is expected behaviour when the device has not yet been paired with 
+     *  a Homey.
+     */
+    
   }
 }
 
@@ -125,17 +125,20 @@ void onExampleAction() {
   Serial.println(value);
 
   /* Note:
-
-      The argument will always be received as a String.
-      If you sent a number or boolean from homey then you can convert
-      the value into the type you want as follows:
-
-       - Integer number: "int value = Homey.value.toInt();"
-       - Floating point number: "float value = Homey.value.toFloat();"
-       - Boolean: "bool value = Homey.value.toInt();"
-       - String: "String value = Homey.value;"
-
-  */
+   *  
+   *  The argument will always be received as a String.
+   *  If you sent a number or boolean from homey then you can convert
+   *  the value into the type you want as follows:
+   *  
+   *   - Integer number: "int value = Homey.value.toInt();"
+   *   - Floating point number: "float value = Homey.value.toFloat();"
+   *   - Boolean: "bool value = Homey.value.toInt();"
+   *   - String: "String value = Homey.value;"
+   *  
+   * In case something goes wrong while executing your action
+   * you can return an error to the Homey flow by calling
+   * Homey.returnError("<message>");
+   */
 }
 
 //An example condition

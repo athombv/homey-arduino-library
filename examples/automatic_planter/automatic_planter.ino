@@ -52,13 +52,13 @@ void setup() {
   Homey.begin("Plantenbak");
 
   //Register actions
-  Homey.onAction("pump_on", onPumpOnAction);    //Turns the pump on
-  Homey.onAction("pump_off", onPumpOffAction);  //Turns the pump off
+  Homey.addAction("pump_on", onPumpOnAction);    //Turns the pump on
+  Homey.addAction("pump_off", onPumpOffAction);  //Turns the pump off
 
   //Register conditions
-  Homey.onCondition("s1_has_water", onSensor1HasWaterCondition);  //Checks the value of water sensor 1 against a supplied value
-  Homey.onCondition("s2_has_water", onSensor2HasWaterCondition);  //Checks the value of water sensor 2 against a supplied value
-  Homey.onCondition("has_water", onHasWaterCondition);            //Checks the flotter state. Returns true when there is water in the water tank
+  Homey.addCondition("s1_has_water", onSensor1HasWaterCondition);  //Checks the value of water sensor 1 against a supplied value
+  Homey.addCondition("s2_has_water", onSensor2HasWaterCondition);  //Checks the value of water sensor 2 against a supplied value
+  Homey.addCondition("has_water", onHasWaterCondition);            //Checks the flotter state. Returns true when there is water in the water tank
 
   previousFloatState = digitalRead(PIN_FLOAT); //Make sure not to trigger after boot
 
@@ -77,7 +77,7 @@ void loop() {
 
     if (previousFloatState != currentFloatState) { //If changed
       previousFloatState = currentFloatState;
-      Homey.emitBoolean("tank_level_changed", currentFloatState); //Emit change event
+      Homey.trigger("tank_level_changed", currentFloatState); //Emit change event
       if (!currentFloatState) { //If the tank has become empty stop the pump
         setPumpState(false);
       }
@@ -93,20 +93,20 @@ void loop() {
     int currentSensor1Value = analogRead(HUM_SENSOR_1);
     if (currentSensor1Value != previousSensor1Value) {
       previousSensor1Value = currentSensor1Value;
-      Homey.emitNumber("s1_water", currentSensor1Value);
+      Homey.trigger("s1_water", currentSensor1Value);
     }
 
     int currentSensor2Value = analogRead(HUM_SENSOR_2);
     if (currentSensor2Value != previousSensor2Value) {
       previousSensor2Value = currentSensor2Value;
-      Homey.emitNumber("s2_water", currentSensor2Value);
+      Homey.trigger("s2_water", currentSensor2Value);
     }
 
   }
 }
 
 void setPumpState(bool state) {
-  Homey.emitBoolean("pump_state_changed", state);
+  Homey.trigger("pump_state_changed", state);
   digitalWrite(PIN_PUMP, state);
 }
 

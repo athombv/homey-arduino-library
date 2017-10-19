@@ -44,10 +44,10 @@ void setup() {
    */
 
   //Register an example action
-  Homey.onAction("myeaction", onExampleAction);
+  Homey.addAction("myaction", onExampleAction);
 
   //Register an example condition
-  Homey.onCondition("mycondition", onExampleCondition);
+  Homey.addCondition("mycondition", onExampleCondition);
 
   /* Note:
    *  Names of actions and conditions can be at most 16 characters long.
@@ -81,18 +81,18 @@ void loop() {
     //(This code will be executed every <interval> milliseconds.)
 
     //Emit a trigger to Homey
-    bool success = Homey.emitText("mytrigger", "Hello world");
+    bool success = Homey.trigger("mytrigger", "Hello world");
     /* Note:
      *  The first argument to the emit function is the name of the trigger  
      *  this name has to match the name used in the flow editor
      *  
      *  The second argument to the emit function is the argument.
      *  An argument can be one of the following:
-     *   - a string ( Homey.emitText(<name>,<argument>); )
-     *   - an integer (int) ( Homey.emitNumber(<name,<argument>); )
-     *   - a floating point number ( Homey.emitNumber(<name>,<argument>); )
-     *   - a boolean ( Homey.emitBoolean(<name>,<argument>); )
-     *   - nothing ( Homey.emit(<name>); )
+     *     - a string
+	   *     - an integer (int)
+	   *     - a floating point number (float or double),
+	   *     - a boolean (bool)
+     *     - nothing (void)
      *  
      *  Make sure to select the right type of flow card to match the type
      *  of argument sent to Homey.
@@ -139,6 +139,9 @@ void onExampleAction() {
    *   - Boolean: "bool value = Homey.value.toInt();"
    *   - String: "String value = Homey.value;"
    *  
+   * In case something goes wrong while executing your action
+   * you can return an error to the Homey flow by calling
+   * Homey.returnError("<message>");
    */
 }
 
