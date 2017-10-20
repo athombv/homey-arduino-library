@@ -122,7 +122,7 @@ bool HomeyClass::trigger(const String& name, bool value)
 
 bool HomeyClass::setCapabilityValue(const String& name)
 {
-	return _emit(name.c_str(), CTYPE_NULL, "\"\"", TYPE_CAPABILITY);
+	return _emit(name.c_str(), CTYPE_NULL, "null", TYPE_CAPABILITY);
 }
 bool HomeyClass::setCapabilityValue(const String& name, const char* value)
 {
@@ -155,7 +155,7 @@ bool HomeyClass::setCapabilityValue(const String& name, bool value)
 
 bool HomeyClass::emit(const String& name)
 {
-	return _emit(name.c_str(), CTYPE_NULL, "\"\"", TYPE_RAW);
+	return _emit(name.c_str(), CTYPE_NULL, "null", TYPE_RAW);
 }
 bool HomeyClass::emit(const String& name, const char* value)
 {
@@ -760,7 +760,7 @@ HomeyFunction::HomeyFunction(char* newName, char* newType, CallbackFunction newC
 	value = NULL;
 	valueType = NULL;
 	if (needsValue) {
-		value = new String("");
+		value = new String("null");
 		valueType = new String(CTYPE_NULL);
 	}
 }
