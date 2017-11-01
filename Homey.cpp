@@ -8,6 +8,7 @@ HomeyClass::HomeyClass( uint16_t port )
 	_port = port;
 	_deviceName = "";
 	_deviceType = DTYPE_UNKNOWN;
+	_deviceClass = DCLASS_OTHER;
 	_master_port = 9999;
 }
 
@@ -27,14 +28,34 @@ void HomeyClass::stop()
 	_udpServer.stop();
 }
 
-void HomeyClass::name(const String& name)
+String HomeyClass::getName()
 {
-	_deviceName = name;
+	return _deviceName;
 }
 
-void HomeyClass::type(const String& type)
+void HomeyClass::setName(const String& deviceName)
 {
-	_deviceType = type;
+	_deviceName = deviceName;
+}
+
+String HomeyClass::getType()
+{
+	return _deviceType;
+}
+
+void HomeyClass::setType(const String& deviceType)
+{
+	_deviceType = deviceType;
+}
+
+String HomeyClass::getClass()
+{
+	return _deviceClass;
+}
+
+void HomeyClass::setClass(const String& deviceClass)
+{
+	_deviceClass = deviceClass;
 }
 
 bool HomeyClass::addAction(const String& name, CallbackFunction fn)
@@ -50,6 +71,11 @@ bool HomeyClass::addCondition(const String& name, CallbackFunction fn)
 bool HomeyClass::addCapability(const String& name, CallbackFunction fn)
 {	//Register a capability
 	return on(name.c_str(), TYPE_CAPABILITY, fn, true);
+}
+
+bool HomeyClass::addRc(const String& name, CallbackFunction fn)
+{	//Register a remote configuration endpoint
+	return on(name.c_str(), TYPE_REMOTE, fn);
 }
 
 HomeyFunction* HomeyClass::findAction(const char* name)
@@ -122,7 +148,7 @@ bool HomeyClass::trigger(const String& name, bool value)
 
 bool HomeyClass::setCapabilityValue(const String& name)
 {
-	return _emit(name.c_str(), CTYPE_NULL, "\"\"", TYPE_CAPABILITY);
+	return _emit(name.c_str(), CTYPE_NULL, "null", TYPE_CAPABILITY);
 }
 bool HomeyClass::setCapabilityValue(const String& name, const char* value)
 {
@@ -155,7 +181,7 @@ bool HomeyClass::setCapabilityValue(const String& name, bool value)
 
 bool HomeyClass::emit(const String& name)
 {
-	return _emit(name.c_str(), CTYPE_NULL, "\"\"", TYPE_RAW);
+	return _emit(name.c_str(), CTYPE_NULL, "null", TYPE_RAW);
 }
 bool HomeyClass::emit(const String& name, const char* value)
 {
@@ -254,6 +280,10 @@ void HomeyClass::loop()
 	yield();
 	while (handleTcp()) { yield(); }
 	yield();
+}
+
+bool HomeyClass::rqType() {
+	return _request.isPost;
 }
 
 /* PRIVATE FUNCTIONS */
@@ -466,7 +496,7 @@ void HomeyClass::handleRequest() {
 	} else if (_request.endpoint=="/") {
 		DEBUG_PRINTLN("index request");
 		returnIndex();
-	} else if (_request.endpoint==ENDPOINT_SET_MASTER) {
+	} else if (_request.endpoint==SME_ENDPOINT) {
 		DEBUG_PRINTLN("master change request");
 		char buffer[ARGUMENT_MAX_SIZE] = {0};
 		strncpy(buffer, _request.args.c_str(), ARGUMENT_MAX_SIZE);
@@ -480,8 +510,7 @@ void HomeyClass::handleRequest() {
 		uint16_t port = atoi(arg_p);
 				
 		if ((host=="") || (port<1) || (!_master_host.fromString(host) || (!success))) {
-			returnError("invalid argument", 400);
-			return;
+			return returnError("invalid argument", 400);
 		}
 		_master_port = port;
 		returnResult((bool) true);
@@ -515,17 +544,13 @@ void HomeyClass::handleRequest() {
 			}
 		} else { //GET request
 			if (function->value==NULL) { //Try returning the current value first (used for capabilities)
-				#ifdef ENABLE_GET_CALL_CB
 				if (function->callback==NULL) {
-				#endif
 					returnError("not gettable", 400); //Return error
-				#ifdef ENABLE_GET_CALL_CB
-				} else { //Else try to run the callback even though it is a get request
+				} else { //Else try to run the callback
 					value = _request.args;
 					returnNothing(); //Leave the answer up to the callback
 					function->callback();
 				}
-				#endif
 			} else {
 				returnResult(*(function->value), *(function->valueType));
 			}
@@ -583,9 +608,17 @@ bool HomeyClass::handleTcp() {
 						
 			if (sendIndex) {			
 				client.print("{\"id\":\"");
-				client.print( _deviceName);
+				client.print(_deviceName);
 				client.print("\",\"type\":\"");
-				client.print( _deviceType);
+				client.print(_deviceType);
+				client.print("\",\"class\":\"");
+				client.print(_deviceClass);
+				/*client.print("\",\"chip\":\"");
+				client.print(CHIP);*/
+				client.print("\",\"numDigitalPins\":\"");
+				client.print(NUM_DIGITAL_PINS);
+				client.print("\",\"numAnalogInputs\":\"");
+				client.print(NUM_ANALOG_INPUTS);
 				client.print("\",\"master\":{\"host\":\"");
 				client.print(_master_host);
 				client.print("\", \"port\":");
@@ -651,9 +684,17 @@ bool HomeyClass::handleUdp() {
 		_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
 		if (_response.code==1) { //Return the index
 			_udpServer.print("{\"id\":\"");
-			_udpServer.print( _deviceName);
+			_udpServer.print(_deviceName);
 			_udpServer.print("\",\"type\":\"");
-			_udpServer.print( _deviceType);
+			_udpServer.print(_deviceType);
+			_udpServer.print("\",\"class\":\"");
+			_udpServer.print(_deviceClass);
+			/*_udpServer.print("\",\"chip\":\"");
+			_udpServer.print(CHIP);*/
+			_udpServer.print("\",\"numDigitalPins\":\"");
+			_udpServer.print(NUM_DIGITAL_PINS);
+			_udpServer.print("\",\"numAnalogInputs\":\"");
+			_udpServer.print(NUM_ANALOG_INPUTS);
 			_udpServer.print("\",\"master\":{\"host\":\"");
 			_udpServer.print(_master_host);
 			_udpServer.print("\", \"port\":");
@@ -760,7 +801,7 @@ HomeyFunction::HomeyFunction(char* newName, char* newType, CallbackFunction newC
 	value = NULL;
 	valueType = NULL;
 	if (needsValue) {
-		value = new String("");
+		value = new String("null");
 		valueType = new String(CTYPE_NULL);
 	}
 }
@@ -768,3 +809,194 @@ HomeyFunction::HomeyFunction(char* newName, char* newType, CallbackFunction newC
 /* OBJECT CREATION */
 
 HomeyClass Homey;
+
+/* Remote configuration */
+uint8_t rcMapPin(String pin)
+{	
+	if (!isDigit(pin.charAt(0))) {
+		//First character is NOT a digit
+		if ((pin.charAt(0)=='A')||(pin.charAt(0)=='a')) {
+			pin.remove(0,1); //Remove first character
+			uint8_t p = pin.toInt();
+			if (p>=NUM_ANALOG_INPUTS) {
+				DEBUG_PRINTLN("invalid analog pin");
+				Homey.returnError("invalid analog pin");
+				return 255;
+			}
+			return analog_input_map[p]; //Map Ax to corresponding digital pin number
+		} else if ((pin.charAt(0)=='D')||(pin.charAt(0)=='d')) {
+			pin.remove(0,1); //Remove first character
+			uint8_t p = pin.toInt();
+			if (p>=sizeof(digital_pin_map)) {
+				DEBUG_PRINTLN("invalid mapped digital pin");
+				Homey.returnError("invalid mapped digital pin");
+				return 255;
+			}
+			return digital_pin_map[p]; //Map Dx to corresponding digital pin number
+		} else {
+			DEBUG_PRINTLN("invalid pin type");
+			Homey.returnError("invalid pin type");
+			return 255;
+		}
+	} else {
+		uint8_t p = pin.toInt();
+		if (p>=NUM_DIGITAL_PINS) {
+			DEBUG_PRINTLN("invalid digital pin");
+			Homey.returnError("invalid digital pin");
+			return 255;
+		}
+		return p;
+	}
+	
+	return 255;
+}
+
+void rcSecurePinMode(const String& pin, uint8_t mode)
+{
+	uint8_t p = rcMapPin(pin);
+	if (p==255) return;
+		
+	pinMode(p, mode);
+}
+
+void rcSecureDigitalWrite(const String& pin, bool state)
+{
+	uint8_t p = rcMapPin(pin);
+	if (p==255) return;
+		
+	digitalWrite(p, state);
+}
+
+bool rcSecureDigitalRead(const String& pin)
+{
+	uint8_t p = rcMapPin(pin);
+	if (p==255) return false;
+	
+	return digitalRead(p);
+}
+
+void rcSecureAnalogWrite(const String& pin, int state)
+{
+	uint8_t p = rcMapPin(pin);
+	if (p==255) return;
+	
+	analogWrite(p, state);
+}
+
+int rcSecureAnalogRead(const String& pin)
+{
+	uint8_t p = rcMapPin(pin);
+	if (p==255) return false;
+	
+	return analogRead(p);
+}
+
+void rcEndpointMode()
+{	
+	uint16_t position = 0;
+	for (;position<Homey.value.length();position++) {
+		if (Homey.value.charAt(position)=='=') break;
+	}
+	
+	uint8_t mode = 255;
+	String modeStr = Homey.value.substring(position+1);
+	
+	if (modeStr == "i") mode = INPUT;
+	if (modeStr == "ip") mode = INPUT_PULLUP;
+	if (modeStr == "o") mode = OUTPUT;
+		
+	if (mode==255) return Homey.returnError("invalid mode");
+	
+	rcSecurePinMode(Homey.value.substring(0,position), mode);
+}
+
+void rcEndpointDigitalWrite()
+{
+	uint16_t position = 0;
+	for (;position<Homey.value.length();position++) {
+		if (Homey.value.charAt(position)=='=') break;
+	}
+	
+	rcSecureDigitalWrite(Homey.value.substring(0,position), Homey.value.substring(position+1).toInt());
+}
+
+void rcEndpointDigitalRead()
+{
+	Homey.returnResult(rcSecureDigitalRead(Homey.value));
+}
+
+void rcEndpointAnalogWrite()
+{
+	uint16_t position = 0;
+	for (;position<Homey.value.length();position++) {
+		if (Homey.value.charAt(position)=='=') break;
+	}
+	
+	rcSecureAnalogWrite(Homey.value.substring(0,position), Homey.value.substring(position+1).toInt());
+}
+
+void rcEndpointAnalogRead()
+{	
+	Homey.returnResult(rcSecureAnalogRead(Homey.value));
+}
+
+void enableRemoteControl()
+{
+	Homey.addRc("mode", rcEndpointMode);
+	Homey.addRc("dwrite", rcEndpointDigitalWrite);
+	Homey.addRc("dread", rcEndpointDigitalRead);
+	Homey.addRc("awrite",rcEndpointAnalogWrite);
+	Homey.addRc("aread", rcEndpointAnalogRead);
+}
+
+/*
+bool rcActive = false;
+#define RC_MODE_IGNORED			0
+#define RC_MODE_DIGITAL_INPUT	1
+#define RC_MODE_DIGITAL_OUTPUT	2
+#define RC_MODE_ANALOG_INPUT	3
+#define RC_MODE_ANALOG_OUTPUT	4
+
+uint8_t rcMode[NUM_DIGITAL_PINS+NUM_ANALOG_PINS] = {RC_MODE_IGNORED};
+
+void rcConfigure() {
+	uint16_t position = 0;
+	for (;position<_request.endpoint.length();position++) {
+		if (_request.endpoint.charAt(position)==':') break;
+	}
+	uint32_t pin = _request.endpoint.substring(0,position).toInt();
+	uint8_t state = _request.endpoint.substring(position+1).toInt();
+	
+	if (pin<NUM_DIGITAL_PINS) {
+		
+	} else {
+		return Homey.returnError("Invalid pin number");
+	}
+}
+
+void rcSetDigitalOutput() {
+	uint16_t position = 0;
+	for (;position<_request.endpoint.length();position++) {
+		if (_request.endpoint.charAt(position)==':') break;
+	}
+	uint32_t pin = _request.endpoint.substring(0,position).toInt();
+	bool state = _request.endpoint.substring(position+1).toInt();
+	
+	if (rcDigitalOutputs&&(1<<pin)) {
+		digitalWrite(pin, state);
+		Serial.print("RC digital output: ");
+		Serial.print(pin);
+		Serial.print(" -> ");
+		Serial.println(state);
+	} else {
+		return Homey.returnError("Pin is not a digital output");
+	}
+}
+
+void rcEnable() {
+	rcActive = true;
+	Homey.addRc("configure", rcConfigure);
+	Homey.addRc("crdout", rcCreateDigitalOutput);
+	Homey.addRc("dset", rcSetDigitalOutput);
+}
+*/
