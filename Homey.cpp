@@ -735,11 +735,11 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 	
 	HomeyFunction* function = find(name, evType);
 	if (function!=NULL) {
-		DEBUG_PRINTLN("emit has matching api");
+		//DEBUG_PRINTLN("emit has matching api");
 		if (function->value!=NULL) {
 			*(function->value) = triggerValue;
 			*(function->valueType) = argType;
-			DEBUG_PRINTLN("SET VALUE");
+			//DEBUG_PRINTLN("SET VALUE");
 		}
 	}
 	
@@ -880,7 +880,11 @@ void rcSecureAnalogWrite(const String& pin, int state)
 	uint8_t p = rcMapPin(pin);
 	if (p==255) return;
 	
+#ifndef ARDUINO_ARCH_ESP32
 	analogWrite(p, state);
+#else
+	DEBUG_PRINTLN("analog write is not supported on this platform");
+#endif
 }
 
 int rcSecureAnalogRead(const String& pin)
