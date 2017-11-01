@@ -1,6 +1,8 @@
 #ifndef _HOMEY_H_
 #define _HOMEY_H_
 
+#include "chip.h" //Try to detect used chip
+
 // Settings
 //#define HOMEY_USE_ETHERNET_V1 //Uncomment when using a legacy ethernet shield
 #define DEBUG_ENABLE //Uncomment to have the library print debug messages
@@ -27,6 +29,7 @@
 #define TYPE_SYSTEM			"sys"
 #define TYPE_TRIGGER		"trg"
 #define TYPE_RAW			"raw"	//Not handled by Homeyduino app!
+#define TYPE_REMOTE			"rc"
 
 #define CTYPE_NULL			"null"
 #define CTYPE_STRING		"String"
@@ -41,7 +44,9 @@
 #define DTYPE_UNKNOWN		"unknown"		//Unconfigured device
 #define DTYPE_HOMEYDUINO 	"homeyduino"	//Homeyduino device
 
-#define ENDPOINT_SET_MASTER "/sys/setmaster"
+#define DCLASS_OTHER		"other"
+
+#define SME_ENDPOINT		"/sys/setmaster"
 
 //Includes
 #include <Arduino.h>
@@ -122,13 +127,18 @@ class HomeyClass {
 		HomeyClass( uint16_t port = 46639 ); 									//Class constructor (port 46639 is t9 for HOMEY)
 		void begin(const String& name, const String& type = DTYPE_HOMEYDUINO);	//Start responding to queries
 		void stop();															//Stop responding to queries
-		void name(const String& name);											//Change the device identifier
-		void type(const String& type);											//Change the device type
-		
+		String getName();														//Get the current device identifier
+		void setName(const String& deviceName);									//Change the device identifier
+		String getType();														//Get the current device type
+		void setType(const String& deviceType);									//Change the device type
+		String getClass();														//Get the current device class
+		void setClass(const String& deviceClass);								//Change the device class
+				
 		//API endpoint management
 		bool addAction(const String& name, CallbackFunction fn);				//Wrapper for on(String&, String&,...) that supplies type as TYPE_ACTION
 		bool addCondition(const String& name, CallbackFunction fn);				//Wrapper for on(String&, String&,...) that supplies type as TYPE_CONDITION
 		bool addCapability(const String& name, CallbackFunction fn = NULL);		//Wrapper for on(String&, String&,...) that supplies type as TYPE_CAPABILITY
+		bool addRc(const String& name, CallbackFunction fn);					//Wrapper for on(String&, String&,...) that supplies type as TYPE_REMOTE
 		HomeyFunction* findAction(const char* name);							//Wrapper for find(...) that supplies type as TYPE_ACTION
 		HomeyFunction* findCondition(const char* name);							//Wrapper for find(...) that supplies type as TYPE_CONDITION
 		HomeyFunction* findCapability(const char* name);						//Wrapper for find(...) that supplies type as TYPE_CAPABILITY
@@ -136,7 +146,7 @@ class HomeyClass {
 		bool removeCondition(const char* name);									//Wrapper for remove(...) that supplies type as TYPE_CONDITION
 		bool removeCapability(const char* name);								//Wrapper for remove(...) that supplies type as TYPE_CAPABILITY
 		void clear();															//Removes all endpoints
-				
+		
 		//Send a trigger event to a Homey flow
 		bool trigger(const String& name);										//Wrapper for emit(...) with NULL argument and type set to trigger
 		bool trigger(const String& name, const char* value);					//Wrapper for emit(...) with char array argument and type set to trigger
@@ -178,6 +188,7 @@ class HomeyClass {
 		
 		//Handle incoming connections
 		void loop();															//Wrapper that runs both TCP and UDP handlers
+		bool rqType();															//Current request type: GET = false, POST = true
 		
 		//Public variables
 		String value;															//The argument supplied by the Homey flow
@@ -206,14 +217,15 @@ class HomeyClass {
 		const char* evType);
 		
 		//Set the answer returned
-		void returnResult(const String& response, const String& type);				//Set the return value
-				
+		void returnResult(const String& response, const String& type);			//Set the return value
+						
 		//Internal variables
 		TCP_SERVER_TYPE _tcpServer;												//The TCP server
 		UDP_SERVER_TYPE _udpServer;												//The UDP server
 		uint16_t _port;															//The listening port for incoming connections
 		String _deviceName;														//The device identifier
 		String _deviceType;														//The device type
+		String _deviceClass;													//The device class
 		HomeyFunction *callbacks[MAXCALLBACKS];									//The registered actions and conditions
 		WebRequest _request;													//API request parameter storage
 		WebResponse _response;													//API response parameter storage
@@ -221,6 +233,23 @@ class HomeyClass {
 		uint16_t _master_port;													//Master port
 		HomeyFunction* firstHomeyFunction = NULL;								//API callbacks linked list entry point
 };
+
+//Pin control functions
+uint8_t rcMapPin(String pin);
+void rcSecurePinMode(const String& pin, uint8_t state);
+void rcSecureDigitalWrite(const String& pin, bool state);
+bool rcSecureDigitalRead(const String& pin);
+void rcSecureAnalogWrite(const String& pin, int state);
+int rcSecureAnalogRead(const String& pin);
+
+//Remote control endpoints
+void rcEndpointMode();
+void rcEndpointDigitalWrite();
+void rcEndpointDigitalRead();
+void rcEndpointAnalogWrite();
+void rcEndpointAnalogRead();
+		
+void enableRemoteControl();														//Enable remote control functions
 
 extern HomeyClass Homey;
 
