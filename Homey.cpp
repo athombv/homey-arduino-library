@@ -735,11 +735,11 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 	
 	HomeyFunction* function = find(name, evType);
 	if (function!=NULL) {
-		DEBUG_PRINTLN("emit has matching api");
+		//DEBUG_PRINTLN("emit has matching api");
 		if (function->value!=NULL) {
 			*(function->value) = triggerValue;
 			*(function->valueType) = argType;
-			DEBUG_PRINTLN("SET VALUE");
+			//DEBUG_PRINTLN("SET VALUE");
 		}
 	}
 	
