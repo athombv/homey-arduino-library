@@ -5,7 +5,7 @@
 
 // Settings
 //#define HOMEY_USE_ETHERNET_V1 //Uncomment when using a legacy ethernet shield
-#define DEBUG_ENABLE //Uncomment to have the library print debug messages
+//#define DEBUG_ENABLE //Uncomment to have the library print debug messages
 
 // Advanced settings
 #define DEBUG_PRINTER Serial //Which class to use for printing debug mesages
@@ -192,6 +192,7 @@ class HomeyClass {
 		
 		//Public variables
 		String value;															//The argument supplied by the Homey flow
+		bool rcEnabled;															//State of RC features
 		
 	private:
 		//Helper functions
@@ -233,23 +234,6 @@ class HomeyClass {
 		uint16_t _master_port;													//Master port
 		HomeyFunction* firstHomeyFunction = NULL;								//API callbacks linked list entry point
 };
-
-//Pin control functions
-uint8_t rcMapPin(String pin);
-void rcSecurePinMode(const String& pin, uint8_t state);
-void rcSecureDigitalWrite(const String& pin, bool state);
-bool rcSecureDigitalRead(const String& pin);
-void rcSecureAnalogWrite(const String& pin, int state);
-int rcSecureAnalogRead(const String& pin);
-
-//Remote control endpoints
-void rcEndpointMode();
-void rcEndpointDigitalWrite();
-void rcEndpointDigitalRead();
-void rcEndpointAnalogWrite();
-void rcEndpointAnalogRead();
-		
-void enableRemoteControl();														//Enable remote control functions
 
 extern HomeyClass Homey;
 
