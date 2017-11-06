@@ -8,7 +8,8 @@
 //#define DEBUG_ENABLE //Uncomment to have the library print debug messages
 
 // Advanced settings
-#define DEBUG_PRINTER Serial //Which class to use for printing debug mesages
+#define DEBUG_PRINTER		Serial			//Which class to use for printing debug mesages
+#define DEVICE_TYPE		 	"homeyduino"	//Device type
 
 /* -------------- DO NOT EDIT ANYTHING BELOW THIS LINE!  -------------- */
 /* (If you do you might break compatibility with the Homeyduino app...) */
@@ -20,8 +21,8 @@
 #define HEADER_MAX_SIZE REQUEST_MAX_SIZE+16
 #define REQUEST_TIMEOUT 100
 
-#define MAX_NAME_LENGTH 32
-#define MAX_TYPE_LENGTH 32
+#define MAX_NAME_LENGTH 24
+#define MAX_TYPE_LENGTH 4
 
 #define TYPE_ACTION 		"act"
 #define TYPE_CONDITION		"con"
@@ -40,9 +41,6 @@
 
 #define BVAL_TRUE			"true"
 #define BVAL_FALSE			"false"
-
-#define DTYPE_UNKNOWN		"unknown"		//Unconfigured device
-#define DTYPE_HOMEYDUINO 	"homeyduino"	//Homeyduino device
 
 #define DCLASS_OTHER		"other"
 
@@ -125,12 +123,10 @@ class HomeyClass {
 	public:
 		//Library and device management
 		HomeyClass( uint16_t port = 46639 ); 									//Class constructor (port 46639 is t9 for HOMEY)
-		void begin(const String& name, const String& type = DTYPE_HOMEYDUINO);	//Start responding to queries
+		void begin(const String& name);											//Start responding to queries
 		void stop();															//Stop responding to queries
 		String getName();														//Get the current device identifier
 		void setName(const String& deviceName);									//Change the device identifier
-		String getType();														//Get the current device type
-		void setType(const String& deviceType);									//Change the device type
 		String getClass();														//Get the current device class
 		void setClass(const String& deviceClass);								//Change the device class
 				
@@ -225,7 +221,6 @@ class HomeyClass {
 		UDP_SERVER_TYPE _udpServer;												//The UDP server
 		uint16_t _port;															//The listening port for incoming connections
 		String _deviceName;														//The device identifier
-		String _deviceType;														//The device type
 		String _deviceClass;													//The device class
 		HomeyFunction *callbacks[MAXCALLBACKS];									//The registered actions and conditions
 		WebRequest _request;													//API request parameter storage

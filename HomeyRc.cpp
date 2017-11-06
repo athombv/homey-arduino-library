@@ -4,7 +4,7 @@ rcTrigger* firstRcTrigger = NULL;
 
 /* Remote configuration */
 uint8_t rcMapPin(String pin)
-{	
+{
 	if (!isDigit(pin.charAt(0))) {
 		//First character is NOT a digit
 		if ((pin.charAt(0)=='A')||(pin.charAt(0)=='a')) {
@@ -12,7 +12,7 @@ uint8_t rcMapPin(String pin)
 			uint8_t p = pin.toInt();
 			if (p>=NUM_ANALOG_INPUTS) {
 				DEBUG_PRINTLN("invalid analog pin");
-				Homey.returnError("invalid analog pin");
+				Homey.returnError("invap");
 				return 255;
 			}
 			return analog_input_map[p]; //Map Ax to corresponding digital pin number
@@ -21,25 +21,25 @@ uint8_t rcMapPin(String pin)
 			uint8_t p = pin.toInt();
 			if (p>=sizeof(digital_pin_map)) {
 				DEBUG_PRINTLN("invalid mapped digital pin");
-				Homey.returnError("invalid mapped digital pin");
+				Homey.returnError("invmap");
 				return 255;
 			}
 			return digital_pin_map[p]; //Map Dx to corresponding digital pin number
 		} else {
 			DEBUG_PRINTLN("invalid pin type");
-			Homey.returnError("invalid pin type");
+			Homey.returnError("invpt");
 			return 255;
 		}
 	} else {
 		uint8_t p = pin.toInt();
 		if (p>=NUM_DIGITAL_PINS) {
 			DEBUG_PRINTLN("invalid digital pin");
-			Homey.returnError("invalid digital pin");
+			Homey.returnError("invdp");
 			return 255;
 		}
 		return p;
 	}
-	
+
 	return 255;
 }
 
@@ -47,7 +47,7 @@ uint8_t rcMapPin(String pin)
 {
 	uint8_t p = rcMapPin(pin);
 	if (p==255) return false;
-		
+
 	pinMode(p, mode);
 	return true;
 }*/
@@ -56,7 +56,7 @@ void rcSecureDigitalWrite(const String& pin, bool state)
 {
 	uint8_t p = rcMapPin(pin);
 	if (p==255) return;
-		
+
 	digitalWrite(p, state);
 }
 
@@ -64,7 +64,7 @@ bool rcSecureDigitalRead(const String& pin)
 {
 	uint8_t p = rcMapPin(pin);
 	if (p==255) return false;
-	
+
 	return digitalRead(p);
 }
 
@@ -72,7 +72,7 @@ void rcSecureAnalogWrite(const String& pin, int state)
 {
 	uint8_t p = rcMapPin(pin);
 	if (p==255) return;
-	
+
 #ifndef ARDUINO_ARCH_ESP32
 	analogWrite(p, state);
 #else
@@ -84,7 +84,7 @@ int rcSecureAnalogRead(const String& pin)
 {
 	uint8_t p = rcMapPin(pin);
 	if (p==255) return false;
-	
+
 	return analogRead(p);
 }
 
@@ -92,7 +92,7 @@ void rcTriggerRegister(const String& name, uint8_t pin, bool analog)
 {
 	rcTrigger* searchItem = firstRcTrigger;
 	rcTrigger* lastItem = firstRcTrigger;
-	
+
 	while (searchItem) {
 		DEBUG_PRINT("In list ");
 		DEBUG_PRINT(searchItem->name);
@@ -105,7 +105,7 @@ void rcTriggerRegister(const String& name, uint8_t pin, bool analog)
 		lastItem= searchItem;
 		searchItem = searchItem->next; //Go to next registration
 	}
-	
+
 	rcTrigger* newItem = new rcTrigger;
 	name.toCharArray(newItem->name, 3);
 	newItem->pin = pin;
@@ -113,7 +113,7 @@ void rcTriggerRegister(const String& name, uint8_t pin, bool analog)
 	newItem->prevState = digitalRead(pin);
 	newItem->prev = lastItem;
 	newItem->next = NULL;
-	
+
 	if (lastItem==NULL) {
 		firstRcTrigger = newItem; //First item
 		DEBUG_PRINTLN("REG ADD FIRST");
@@ -122,13 +122,13 @@ void rcTriggerRegister(const String& name, uint8_t pin, bool analog)
 		newItem->prev = lastItem; //Link to list
 		DEBUG_PRINTLN("REG ADD NEXT");
 	}
-	
+
 }
 
 void rcTriggerRemove(uint8_t pin)
 {
 	rcTrigger* searchItem = firstRcTrigger;
-	
+
 	while (searchItem) {
 		if (searchItem->pin==pin) {
 			if (searchItem->next) {
@@ -151,7 +151,7 @@ void rcTriggerRemove(uint8_t pin)
 		}
 		searchItem = searchItem->next; //Go to next registration
 	}
-	
+
 	DEBUG_PRINTLN("REG DEL NOT FOUND");
 }
 
@@ -159,42 +159,48 @@ void rcTriggerRun()
 {
 	DEBUG_PRINTLN("rcTriggerRun START");
 	rcTrigger* item = firstRcTrigger;
-	
+
 	while (item) {
 		DEBUG_PRINT("rcTriggerRun ITEM");
 		DEBUG_PRINT(item->name);
 		DEBUG_PRINT(" ");
-		bool state = digitalRead(item->pin);
+		uint16_t state;
+		if (item->analog) {
+			state = analogRead(item->pin);
+		} else {
+			state =	digitalRead(item->pin);
+		}
 		DEBUG_PRINT(" = ");
 		DEBUG_PRINTLN(state);
 		if (state!=item->prevState) {
 			item->prevState = state;
-			Homey.trigger(String(item->name), state);
+			if (item->analog) {
+				Homey.trigger(String(item->name), (int) state);
+			} else {
+				Homey.trigger(String(item->name), (bool) state);
+			}
 		}
 		item = item->next; //Go to next registration
 	}
-	
+
 	DEBUG_PRINTLN("rcTriggerRun DONE");
 }
 
 void rcEndpointMode()
-{	
+{
 	uint16_t position = 0;
 	for (;position<Homey.value.length();position++) {
 		if (Homey.value.charAt(position)=='=') break;
 	}
-	
+
 	uint8_t mode = 255;
 	bool reg = false;
 	bool trana = false;
-	
+
 	String modeStr = Homey.value.substring(position+1);
-	
-	Serial.print("modeStr: ");
-	Serial.println(modeStr);
-	
+
 	if (modeStr == "di") mode = INPUT;
-	if (modeStr == "dip") mode = INPUT_PULLUP;		
+	if (modeStr == "dip") mode = INPUT_PULLUP;
 	if (modeStr == "dit") {
 		mode = INPUT;
 		reg = true;
@@ -217,18 +223,17 @@ void rcEndpointMode()
 		reg = true;
 		trana = true;
 	}
-	
-			
-	if (mode==255) return Homey.returnError("invalid mode");
-	
+
+	if (mode==255) return Homey.returnError("invm");
+
 	String name = Homey.value.substring(0,position);
-	
+
 	uint8_t pin = rcMapPin(name);
-	
-	if (pin==255) return Homey.returnError("invalid pin");
-		
+
+	if (pin==255) return Homey.returnError("invp");
+
 	pinMode(pin, mode);
-	
+
 	if (reg) {
 		rcTriggerRegister(name, pin, trana);
 	} else {
@@ -242,7 +247,7 @@ void rcEndpointDigitalWrite()
 	for (;position<Homey.value.length();position++) {
 		if (Homey.value.charAt(position)=='=') break;
 	}
-	
+
 	rcSecureDigitalWrite(Homey.value.substring(0,position), Homey.value.substring(position+1).toInt());
 }
 
@@ -257,12 +262,12 @@ void rcEndpointAnalogWrite()
 	for (;position<Homey.value.length();position++) {
 		if (Homey.value.charAt(position)=='=') break;
 	}
-	
+
 	rcSecureAnalogWrite(Homey.value.substring(0,position), Homey.value.substring(position+1).toInt());
 }
 
 void rcEndpointAnalogRead()
-{	
+{
 	Homey.returnResult(rcSecureAnalogRead(Homey.value));
 }
 
@@ -274,4 +279,4 @@ void rcEnable()
 	Homey.addRc("awrite",rcEndpointAnalogWrite);
 	Homey.addRc("aread", rcEndpointAnalogRead);
 	Homey.rcEnabled = true;
-} 
+}

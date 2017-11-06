@@ -16,7 +16,7 @@
 		char name[3];
 		uint8_t pin;			//Arduino pin number
 		bool analog;			//Analog or digital input?
-		bool prevState;
+		uint16_t prevState; //Previous state
 		rcTrigger* prev;	//Linked list (<)
 		rcTrigger* next;	//Linked list (>)
 	};

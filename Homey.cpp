@@ -7,15 +7,13 @@ HomeyClass::HomeyClass( uint16_t port )
 {
 	_port = port;
 	_deviceName = "";
-	_deviceType = DTYPE_UNKNOWN;
 	_deviceClass = DCLASS_OTHER;
 	_master_port = 9999;
 }
 
-void HomeyClass::begin(const String& name, const String& type)
+void HomeyClass::begin(const String& name)
 {
 	_deviceName = name;
-	_deviceType = type;
 	_tcpServer.begin();
 	_udpServer.begin(_port);
 }
@@ -36,16 +34,6 @@ String HomeyClass::getName()
 void HomeyClass::setName(const String& deviceName)
 {
 	_deviceName = deviceName;
-}
-
-String HomeyClass::getType()
-{
-	return _deviceType;
-}
-
-void HomeyClass::setType(const String& deviceType)
-{
-	_deviceType = deviceType;
 }
 
 String HomeyClass::getClass()
@@ -229,8 +217,10 @@ void HomeyClass::returnNothing()
 void HomeyClass::returnError(const String& error, uint16_t code)
 {
 	_response.code = code;
-	_response.response = "\""+error+"\"";
-	_response.type = "Error";
+	_response.response  = '\"';
+	_response.response += error;
+	_response.response += '\"';
+	_response.type = "err";
 }
 
 void HomeyClass::returnResult(const String& response, const String& type)
@@ -610,7 +600,7 @@ bool HomeyClass::handleTcp() {
 				client.print("{\"id\":\"");
 				client.print(_deviceName);
 				client.print("\",\"type\":\"");
-				client.print(_deviceType);
+				client.print(DEVICE_TYPE);
 				client.print("\",\"class\":\"");
 				client.print(_deviceClass);
 				client.print("\",\"arch\":\"");
@@ -642,9 +632,9 @@ bool HomeyClass::handleTcp() {
 				}
 				client.print("}}");
 			} else {
-				client.print("{\"type\":\"");
+				client.print("{\"t\":\"");
 				client.print(_response.type);
-				client.print("\",\"result\":");
+				client.print("\",\"r\":");
 				if (_response.response=="") _response.response = "\"\"";
 				client.print(_response.response);
 				client.print("}");
@@ -660,7 +650,7 @@ bool HomeyClass::handleTcp() {
 bool HomeyClass::handleUdp() {
 	int packetSize = _udpServer.parsePacket();
 	if (packetSize) {
-		if (packetSize>=ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE) {
+		/*if (packetSize>=ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE) {
 			_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
 			const char err[] = "{\"error\":\"packet too large\"}";
 			_udpServer.write((uint8_t*) err, strlen(err));
@@ -683,12 +673,12 @@ bool HomeyClass::handleUdp() {
 		
 		handleRequest();
 
-		_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
-		if (_response.code==1) { //Return the index
+		*/_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
+		/*if (_response.code==1) { //Return the index*/
 			_udpServer.print("{\"id\":\"");
 			_udpServer.print(_deviceName);
 			_udpServer.print("\",\"type\":\"");
-			_udpServer.print(_deviceType);
+			_udpServer.print(DEVICE_TYPE);
 			_udpServer.print("\",\"class\":\"");
 			_udpServer.print(_deviceClass);
 			_udpServer.print("\",\"arch\":\"");
@@ -720,14 +710,14 @@ bool HomeyClass::handleUdp() {
 			}
 			_udpServer.print("}}");
 			
-		} else {
-			_udpServer.print("{\"type\":\"");
+		/*} else {
+			_udpServer.print("{\"t\":\"");
 			_udpServer.print(_response.type);
-			_udpServer.print("\",\"result\":");
+			_udpServer.print("\",\"r\":");
 			if (_response.response=="") _response.response = "\"\"";
 			_udpServer.print(_response.response);
 			_udpServer.print("}");
-		}
+		}*/
 		_udpServer.endPacket();
 		return true;
 	}
