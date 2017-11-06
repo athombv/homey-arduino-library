@@ -5,10 +5,11 @@
 
 // Settings
 //#define HOMEY_USE_ETHERNET_V1 //Uncomment when using a legacy ethernet shield
-#define DEBUG_ENABLE //Uncomment to have the library print debug messages
+//#define DEBUG_ENABLE //Uncomment to have the library print debug messages
 
 // Advanced settings
-#define DEBUG_PRINTER Serial //Which class to use for printing debug mesages
+#define DEBUG_PRINTER		Serial			//Which class to use for printing debug mesages
+#define DEVICE_TYPE		 	"homeyduino"	//Device type
 
 /* -------------- DO NOT EDIT ANYTHING BELOW THIS LINE!  -------------- */
 /* (If you do you might break compatibility with the Homeyduino app...) */
@@ -20,8 +21,8 @@
 #define HEADER_MAX_SIZE REQUEST_MAX_SIZE+16
 #define REQUEST_TIMEOUT 100
 
-#define MAX_NAME_LENGTH 32
-#define MAX_TYPE_LENGTH 32
+#define MAX_NAME_LENGTH 24
+#define MAX_TYPE_LENGTH 4
 
 #define TYPE_ACTION 		"act"
 #define TYPE_CONDITION		"con"
@@ -40,9 +41,6 @@
 
 #define BVAL_TRUE			"true"
 #define BVAL_FALSE			"false"
-
-#define DTYPE_UNKNOWN		"unknown"		//Unconfigured device
-#define DTYPE_HOMEYDUINO 	"homeyduino"	//Homeyduino device
 
 #define DCLASS_OTHER		"other"
 
@@ -125,12 +123,10 @@ class HomeyClass {
 	public:
 		//Library and device management
 		HomeyClass( uint16_t port = 46639 ); 									//Class constructor (port 46639 is t9 for HOMEY)
-		void begin(const String& name, const String& type = DTYPE_HOMEYDUINO);	//Start responding to queries
+		void begin(const String& name);											//Start responding to queries
 		void stop();															//Stop responding to queries
 		String getName();														//Get the current device identifier
 		void setName(const String& deviceName);									//Change the device identifier
-		String getType();														//Get the current device type
-		void setType(const String& deviceType);									//Change the device type
 		String getClass();														//Get the current device class
 		void setClass(const String& deviceClass);								//Change the device class
 				
@@ -192,6 +188,7 @@ class HomeyClass {
 		
 		//Public variables
 		String value;															//The argument supplied by the Homey flow
+		bool rcEnabled;															//State of RC features
 		
 	private:
 		//Helper functions
@@ -224,7 +221,6 @@ class HomeyClass {
 		UDP_SERVER_TYPE _udpServer;												//The UDP server
 		uint16_t _port;															//The listening port for incoming connections
 		String _deviceName;														//The device identifier
-		String _deviceType;														//The device type
 		String _deviceClass;													//The device class
 		HomeyFunction *callbacks[MAXCALLBACKS];									//The registered actions and conditions
 		WebRequest _request;													//API request parameter storage
@@ -233,23 +229,6 @@ class HomeyClass {
 		uint16_t _master_port;													//Master port
 		HomeyFunction* firstHomeyFunction = NULL;								//API callbacks linked list entry point
 };
-
-//Pin control functions
-uint8_t rcMapPin(String pin);
-void rcSecurePinMode(const String& pin, uint8_t state);
-void rcSecureDigitalWrite(const String& pin, bool state);
-bool rcSecureDigitalRead(const String& pin);
-void rcSecureAnalogWrite(const String& pin, int state);
-int rcSecureAnalogRead(const String& pin);
-
-//Remote control endpoints
-void rcEndpointMode();
-void rcEndpointDigitalWrite();
-void rcEndpointDigitalRead();
-void rcEndpointAnalogWrite();
-void rcEndpointAnalogRead();
-		
-void enableRemoteControl();														//Enable remote control functions
 
 extern HomeyClass Homey;
 

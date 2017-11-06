@@ -7,15 +7,13 @@ HomeyClass::HomeyClass( uint16_t port )
 {
 	_port = port;
 	_deviceName = "";
-	_deviceType = DTYPE_UNKNOWN;
 	_deviceClass = DCLASS_OTHER;
 	_master_port = 9999;
 }
 
-void HomeyClass::begin(const String& name, const String& type)
+void HomeyClass::begin(const String& name)
 {
 	_deviceName = name;
-	_deviceType = type;
 	_tcpServer.begin();
 	_udpServer.begin(_port);
 }
@@ -36,16 +34,6 @@ String HomeyClass::getName()
 void HomeyClass::setName(const String& deviceName)
 {
 	_deviceName = deviceName;
-}
-
-String HomeyClass::getType()
-{
-	return _deviceType;
-}
-
-void HomeyClass::setType(const String& deviceType)
-{
-	_deviceType = deviceType;
 }
 
 String HomeyClass::getClass()
@@ -229,8 +217,10 @@ void HomeyClass::returnNothing()
 void HomeyClass::returnError(const String& error, uint16_t code)
 {
 	_response.code = code;
-	_response.response = "\""+error+"\"";
-	_response.type = "Error";
+	_response.response  = '\"';
+	_response.response += error;
+	_response.response += '\"';
+	_response.type = "err";
 }
 
 void HomeyClass::returnResult(const String& response, const String& type)
@@ -610,15 +600,17 @@ bool HomeyClass::handleTcp() {
 				client.print("{\"id\":\"");
 				client.print(_deviceName);
 				client.print("\",\"type\":\"");
-				client.print(_deviceType);
+				client.print(DEVICE_TYPE);
 				client.print("\",\"class\":\"");
 				client.print(_deviceClass);
-				/*client.print("\",\"chip\":\"");
-				client.print(CHIP);*/
+				client.print("\",\"arch\":\"");
+				client.print(arduino_arch);
 				client.print("\",\"numDigitalPins\":\"");
 				client.print(NUM_DIGITAL_PINS);
 				client.print("\",\"numAnalogInputs\":\"");
 				client.print(NUM_ANALOG_INPUTS);
+				client.print("\",\"rc\":\"");
+				client.print(rcEnabled);
 				client.print("\",\"master\":{\"host\":\"");
 				client.print(_master_host);
 				client.print("\", \"port\":");
@@ -640,9 +632,9 @@ bool HomeyClass::handleTcp() {
 				}
 				client.print("}}");
 			} else {
-				client.print("{\"type\":\"");
+				client.print("{\"t\":\"");
 				client.print(_response.type);
-				client.print("\",\"result\":");
+				client.print("\",\"r\":");
 				if (_response.response=="") _response.response = "\"\"";
 				client.print(_response.response);
 				client.print("}");
@@ -658,7 +650,7 @@ bool HomeyClass::handleTcp() {
 bool HomeyClass::handleUdp() {
 	int packetSize = _udpServer.parsePacket();
 	if (packetSize) {
-		if (packetSize>=ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE) {
+		/*if (packetSize>=ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE) {
 			_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
 			const char err[] = "{\"error\":\"packet too large\"}";
 			_udpServer.write((uint8_t*) err, strlen(err));
@@ -681,20 +673,22 @@ bool HomeyClass::handleUdp() {
 		
 		handleRequest();
 
-		_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
-		if (_response.code==1) { //Return the index
+		*/_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
+		/*if (_response.code==1) { //Return the index*/
 			_udpServer.print("{\"id\":\"");
 			_udpServer.print(_deviceName);
 			_udpServer.print("\",\"type\":\"");
-			_udpServer.print(_deviceType);
+			_udpServer.print(DEVICE_TYPE);
 			_udpServer.print("\",\"class\":\"");
 			_udpServer.print(_deviceClass);
-			/*_udpServer.print("\",\"chip\":\"");
-			_udpServer.print(CHIP);*/
+			_udpServer.print("\",\"arch\":\"");
+			_udpServer.print(arduino_arch);
 			_udpServer.print("\",\"numDigitalPins\":\"");
 			_udpServer.print(NUM_DIGITAL_PINS);
 			_udpServer.print("\",\"numAnalogInputs\":\"");
 			_udpServer.print(NUM_ANALOG_INPUTS);
+			_udpServer.print("\",\"rc\":\"");
+			_udpServer.print(rcEnabled);
 			_udpServer.print("\",\"master\":{\"host\":\"");
 			_udpServer.print(_master_host);
 			_udpServer.print("\", \"port\":");
@@ -716,14 +710,14 @@ bool HomeyClass::handleUdp() {
 			}
 			_udpServer.print("}}");
 			
-		} else {
-			_udpServer.print("{\"type\":\"");
+		/*} else {
+			_udpServer.print("{\"t\":\"");
 			_udpServer.print(_response.type);
-			_udpServer.print("\",\"result\":");
+			_udpServer.print("\",\"r\":");
 			if (_response.response=="") _response.response = "\"\"";
 			_udpServer.print(_response.response);
 			_udpServer.print("}");
-		}
+		}*/
 		_udpServer.endPacket();
 		return true;
 	}
@@ -809,198 +803,3 @@ HomeyFunction::HomeyFunction(char* newName, char* newType, CallbackFunction newC
 /* OBJECT CREATION */
 
 HomeyClass Homey;
-
-/* Remote configuration */
-uint8_t rcMapPin(String pin)
-{	
-	if (!isDigit(pin.charAt(0))) {
-		//First character is NOT a digit
-		if ((pin.charAt(0)=='A')||(pin.charAt(0)=='a')) {
-			pin.remove(0,1); //Remove first character
-			uint8_t p = pin.toInt();
-			if (p>=NUM_ANALOG_INPUTS) {
-				DEBUG_PRINTLN("invalid analog pin");
-				Homey.returnError("invalid analog pin");
-				return 255;
-			}
-			return analog_input_map[p]; //Map Ax to corresponding digital pin number
-		} else if ((pin.charAt(0)=='D')||(pin.charAt(0)=='d')) {
-			pin.remove(0,1); //Remove first character
-			uint8_t p = pin.toInt();
-			if (p>=sizeof(digital_pin_map)) {
-				DEBUG_PRINTLN("invalid mapped digital pin");
-				Homey.returnError("invalid mapped digital pin");
-				return 255;
-			}
-			return digital_pin_map[p]; //Map Dx to corresponding digital pin number
-		} else {
-			DEBUG_PRINTLN("invalid pin type");
-			Homey.returnError("invalid pin type");
-			return 255;
-		}
-	} else {
-		uint8_t p = pin.toInt();
-		if (p>=NUM_DIGITAL_PINS) {
-			DEBUG_PRINTLN("invalid digital pin");
-			Homey.returnError("invalid digital pin");
-			return 255;
-		}
-		return p;
-	}
-	
-	return 255;
-}
-
-void rcSecurePinMode(const String& pin, uint8_t mode)
-{
-	uint8_t p = rcMapPin(pin);
-	if (p==255) return;
-		
-	pinMode(p, mode);
-}
-
-void rcSecureDigitalWrite(const String& pin, bool state)
-{
-	uint8_t p = rcMapPin(pin);
-	if (p==255) return;
-		
-	digitalWrite(p, state);
-}
-
-bool rcSecureDigitalRead(const String& pin)
-{
-	uint8_t p = rcMapPin(pin);
-	if (p==255) return false;
-	
-	return digitalRead(p);
-}
-
-void rcSecureAnalogWrite(const String& pin, int state)
-{
-	uint8_t p = rcMapPin(pin);
-	if (p==255) return;
-	
-#ifndef ARDUINO_ARCH_ESP32
-	analogWrite(p, state);
-#else
-	DEBUG_PRINTLN("analog write is not supported on this platform");
-#endif
-}
-
-int rcSecureAnalogRead(const String& pin)
-{
-	uint8_t p = rcMapPin(pin);
-	if (p==255) return false;
-	
-	return analogRead(p);
-}
-
-void rcEndpointMode()
-{	
-	uint16_t position = 0;
-	for (;position<Homey.value.length();position++) {
-		if (Homey.value.charAt(position)=='=') break;
-	}
-	
-	uint8_t mode = 255;
-	String modeStr = Homey.value.substring(position+1);
-	
-	if (modeStr == "i") mode = INPUT;
-	if (modeStr == "ip") mode = INPUT_PULLUP;
-	if (modeStr == "o") mode = OUTPUT;
-		
-	if (mode==255) return Homey.returnError("invalid mode");
-	
-	rcSecurePinMode(Homey.value.substring(0,position), mode);
-}
-
-void rcEndpointDigitalWrite()
-{
-	uint16_t position = 0;
-	for (;position<Homey.value.length();position++) {
-		if (Homey.value.charAt(position)=='=') break;
-	}
-	
-	rcSecureDigitalWrite(Homey.value.substring(0,position), Homey.value.substring(position+1).toInt());
-}
-
-void rcEndpointDigitalRead()
-{
-	Homey.returnResult(rcSecureDigitalRead(Homey.value));
-}
-
-void rcEndpointAnalogWrite()
-{
-	uint16_t position = 0;
-	for (;position<Homey.value.length();position++) {
-		if (Homey.value.charAt(position)=='=') break;
-	}
-	
-	rcSecureAnalogWrite(Homey.value.substring(0,position), Homey.value.substring(position+1).toInt());
-}
-
-void rcEndpointAnalogRead()
-{	
-	Homey.returnResult(rcSecureAnalogRead(Homey.value));
-}
-
-void enableRemoteControl()
-{
-	Homey.addRc("mode", rcEndpointMode);
-	Homey.addRc("dwrite", rcEndpointDigitalWrite);
-	Homey.addRc("dread", rcEndpointDigitalRead);
-	Homey.addRc("awrite",rcEndpointAnalogWrite);
-	Homey.addRc("aread", rcEndpointAnalogRead);
-}
-
-/*
-bool rcActive = false;
-#define RC_MODE_IGNORED			0
-#define RC_MODE_DIGITAL_INPUT	1
-#define RC_MODE_DIGITAL_OUTPUT	2
-#define RC_MODE_ANALOG_INPUT	3
-#define RC_MODE_ANALOG_OUTPUT	4
-
-uint8_t rcMode[NUM_DIGITAL_PINS+NUM_ANALOG_PINS] = {RC_MODE_IGNORED};
-
-void rcConfigure() {
-	uint16_t position = 0;
-	for (;position<_request.endpoint.length();position++) {
-		if (_request.endpoint.charAt(position)==':') break;
-	}
-	uint32_t pin = _request.endpoint.substring(0,position).toInt();
-	uint8_t state = _request.endpoint.substring(position+1).toInt();
-	
-	if (pin<NUM_DIGITAL_PINS) {
-		
-	} else {
-		return Homey.returnError("Invalid pin number");
-	}
-}
-
-void rcSetDigitalOutput() {
-	uint16_t position = 0;
-	for (;position<_request.endpoint.length();position++) {
-		if (_request.endpoint.charAt(position)==':') break;
-	}
-	uint32_t pin = _request.endpoint.substring(0,position).toInt();
-	bool state = _request.endpoint.substring(position+1).toInt();
-	
-	if (rcDigitalOutputs&&(1<<pin)) {
-		digitalWrite(pin, state);
-		Serial.print("RC digital output: ");
-		Serial.print(pin);
-		Serial.print(" -> ");
-		Serial.println(state);
-	} else {
-		return Homey.returnError("Pin is not a digital output");
-	}
-}
-
-void rcEnable() {
-	rcActive = true;
-	Homey.addRc("configure", rcConfigure);
-	Homey.addRc("crdout", rcCreateDigitalOutput);
-	Homey.addRc("dset", rcSetDigitalOutput);
-}
-*/
