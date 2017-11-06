@@ -16,7 +16,19 @@ uint8_t rcMapPin(String pin)
 				return 255;
 			}
 			return analog_input_map[p]; //Map Ax to corresponding digital pin number
-		} else if ((pin.charAt(0)=='D')||(pin.charAt(0)=='d')) {
+		}
+		#if defined(_VARIANT_ARDUINO_DUE_X_) //Hack for supporting the special pins on Arduino Due
+			else if(pin=="DAC0") {
+				return DAC0;
+			} else if(pin=="DAC1") {
+				return DAC1;
+			} else if(pin=="CANRX") {
+				return CANRX;
+			} else if(pin=="CANTX") {
+				return CANTX;
+			}
+		#endif
+		else if ((pin.charAt(0)=='D')||(pin.charAt(0)=='d')) {
 			pin.remove(0,1); //Remove first character
 			uint8_t p = pin.toInt();
 			if (p>=sizeof(digital_pin_map)) {
