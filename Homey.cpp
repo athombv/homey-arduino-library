@@ -408,23 +408,18 @@ bool HomeyClass::on(const char* name, const char* type, CallbackFunction cb, boo
 	//if (cb==NULL) {DEBUG_PRINTLN("Callback is null"); return false; }
 
 	char* newType = copyCharArray(type, MAX_TYPE_LENGTH);
-	if (newType==NULL) { Serial.println("err type"); DEBUG_PRINTLN("Alloc error for type"); return false; }
+	if (newType==NULL) { DEBUG_PRINTLN("Alloc error for type"); return false; }
 
-	Serial.println("alloc name");
 	char* newName = copyCharArray(name, MAX_NAME_LENGTH);
-	if (newName==NULL) { Serial.println("err name"); DEBUG_PRINTLN("Alloc error for name"); free(newType); return false; }
+	if (newName==NULL) { DEBUG_PRINTLN("Alloc error for name"); free(newType); return false; }
 
-Serial.println("alloc obj");
 	HomeyFunction *newFunction = new HomeyFunction(newName, newType, cb, needsValue);
 	if (newFunction==NULL) {
-		Serial.println("err obj");
 		DEBUG_PRINTLN("Alloc error for object");
 		free(newType);
 		free(newName);
 		return false;
 	}
-
-	Serial.println("ok?");
 
 	if (firstHomeyFunction==NULL) {
 		firstHomeyFunction = newFunction;
