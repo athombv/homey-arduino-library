@@ -282,7 +282,7 @@ bool HomeyClass::split(char* buffer, char*& a, char*& b, char separator, uint16_
 {
 	a = buffer; //Set to start of buffer
 	b = &buffer[size-1]; //Set to end of buffer
-	
+
 	for (uint8_t i = 0; i<size; i++) { //Find separator in buffer
 		if (buffer[i]==0) break; //Stop when at end-of-string
 		if (buffer[i]==separator) { //If current character is separator
@@ -309,9 +309,9 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 	_request.endpoint = "";
 	_request.args = "";
 	_request.isPost = false;
-	
+
 	char buffer[HEADER_MAX_SIZE] = {0};
-	
+
 	uint8_t to = REQUEST_TIMEOUT;
 	while (client->available()<10) {
 		delay(1);
@@ -319,10 +319,10 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 		to--;
 		if (to<1) break;
 	}
-	
+
 	DEBUG_PRINT("timeout: ");
 	DEBUG_PRINTLN(to);
-	
+
 	//Read first header into buffer
 	for (uint16_t i = 0; i<HEADER_MAX_SIZE; i++) {
 		if (!client->connected()) break;
@@ -331,17 +331,17 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 		if (c=='\n') break;
 		if (c!='\r') buffer[i] = c;
 	}
-	
+
 	DEBUG_PRINT("First header: ");
 	DEBUG_PRINTLN(buffer);
-	
+
 	char* requestType;
 	char* request;
 	char* restOfBuffer;
-	
+
 	split(buffer, requestType, restOfBuffer, ' ', HEADER_MAX_SIZE);
 	split(restOfBuffer, request, restOfBuffer, ' ', HEADER_MAX_SIZE - strlen(requestType));
-		
+
 	if (strncmp(requestType, "GET", 3)==0) {
 		DEBUG_PRINTLN("GET REQUEST");
 	} else if (strncmp(requestType, "POST", 4)==0) {
@@ -354,25 +354,25 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 		DEBUG_PRINTLN("<");
 		return false;
 	}
-		
+
 	char* endpoint;
 	char* argument;
-	
+
 	split(request, endpoint, argument, '?', REQUEST_MAX_SIZE);
-	
-	_request.endpoint = endpoint;	
+
+	_request.endpoint = endpoint;
 	_request.args = argument;
-	
+
 	/*DEBUG_PRINTLN("-----");
-	
+
 	DEBUG_PRINT("Endpoint: ");
 	DEBUG_PRINTLN(endpoint);
-	
+
 	DEBUG_PRINT("GET argument: ");
 	DEBUG_PRINTLN(argument);
-	
+
 	DEBUG_PRINTLN("-----");*/
-	
+
 	//Then skip over the other headers
 	bool emptyLine = true;
 	while(client->connected() && client->available()) {
@@ -391,9 +391,9 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 		emptyLine = false;
 		DEBUG_PRINT(c);
 	}
-	
+
 	DEBUG_PRINTLN("-----");
-	
+
 	if (_request.isPost) { //Read POST data
 		_request.args = "";
 		while (client->connected() && client->available()) {
@@ -406,13 +406,13 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 
 bool HomeyClass::on(const char* name, const char* type, CallbackFunction cb, bool needsValue) {
 	//if (cb==NULL) {DEBUG_PRINTLN("Callback is null"); return false; }
-	
+
 	char* newType = copyCharArray(type, MAX_TYPE_LENGTH);
 	if (newType==NULL) { DEBUG_PRINTLN("Alloc error for type"); return false; }
-	
+
 	char* newName = copyCharArray(name, MAX_NAME_LENGTH);
 	if (newName==NULL) { DEBUG_PRINTLN("Alloc error for name"); free(newType); return false; }
-	
+
 	HomeyFunction *newFunction = new HomeyFunction(newName, newType, cb, needsValue);
 	if (newFunction==NULL) {
 		DEBUG_PRINTLN("Alloc error for object");
@@ -420,7 +420,7 @@ bool HomeyClass::on(const char* name, const char* type, CallbackFunction cb, boo
 		free(newName);
 		return false;
 	}
-	
+
 	if (firstHomeyFunction==NULL) {
 		firstHomeyFunction = newFunction;
 	} else {
@@ -428,7 +428,7 @@ bool HomeyClass::on(const char* name, const char* type, CallbackFunction cb, boo
 		HomeyFunction *last = firstHomeyFunction;
 		while (next!=NULL) { last = next; next = last->nextFunction; } //Follow links until end of list
 		newFunction->prevFunction = last; // <
-		last->nextFunction = newFunction; // >  
+		last->nextFunction = newFunction; // >
 	}
 	return true;
 }
@@ -441,10 +441,10 @@ bool HomeyClass::on(const String& name, const String& type, CallbackFunction fn)
 HomeyFunction* HomeyClass::find(const char* name, const char* type)
 {
 	HomeyFunction *item = firstHomeyFunction;
-	
+
 	if ((name[0]==0)&&(type[0]==0)) return item; //Empty query returns first item (used for "clear" function)
-	
-	while (item!=NULL) {	 
+
+	while (item!=NULL) {
 		uint16_t typelen = strnlen(item->type,MAX_TYPE_LENGTH);
 		uint16_t namelen = strnlen(item->name,MAX_NAME_LENGTH);
 		if ((strncmp(item->type,type,typelen)==0)&&(strncmp(item->name,name,namelen)==0)) {
@@ -490,15 +490,15 @@ void HomeyClass::handleRequest() {
 		DEBUG_PRINTLN("master change request");
 		char buffer[ARGUMENT_MAX_SIZE] = {0};
 		strncpy(buffer, _request.args.c_str(), ARGUMENT_MAX_SIZE);
-		
+
 		char* arg_h;
 		char* arg_p;
-		
+
 		bool success = split(buffer, arg_h, arg_p, ':', ARGUMENT_MAX_SIZE);
-				
+
 		String host = arg_h;
 		uint16_t port = atoi(arg_p);
-				
+
 		if ((host=="") || (port<1) || (!_master_host.fromString(host) || (!success))) {
 			return returnError("invalid argument", 400);
 		}
@@ -514,14 +514,14 @@ void HomeyClass::handleRequest() {
 		}
 		String type = _request.endpoint.substring(0,position);
 		String name = _request.endpoint.substring(position+1);
-		
+
 		DEBUG_PRINT("searching '");
 		DEBUG_PRINT(name);
 		DEBUG_PRINT("' of type '");
 		DEBUG_PRINT(type);
 		DEBUG_PRINTLN("'...");
 		HomeyFunction* function = find(name.c_str(), type.c_str());
-		
+
 		if (function==NULL) {
 			returnError("not found", 404);
 		} else if (_request.isPost) { //POST request
@@ -557,7 +557,7 @@ bool HomeyClass::handleTcp() {
 			if (!valid) {
 				returnError("Could not parse request", 400);
 			} else {
-				
+
 				if (_request.isPost) {
 					DEBUG_PRINT("Handled as post request: ");
 					DEBUG_PRINTLN(_request.endpoint);
@@ -565,15 +565,15 @@ bool HomeyClass::handleTcp() {
 					DEBUG_PRINT("Handled as get request: ");
 					DEBUG_PRINTLN(_request.endpoint);
 				}
-				
+
 				handleRequest();
-				
+
 				if (_response.code==1) {
 					sendIndex = true;
 					_response.code = 200;
 				}
 			}
-			
+
 			const char* desc;
 			if (_response.code==400) {
 				desc = "Bad Request";
@@ -587,7 +587,7 @@ bool HomeyClass::handleTcp() {
 				_response.code = 200;
 				desc = "OK";
 			}
-			
+
 			client.print("HTTP/1.1 ");
 			client.print(_response.code);
 			client.print(' ');
@@ -595,8 +595,8 @@ bool HomeyClass::handleTcp() {
 			client.println("Content-Type: application/json");
 			client.println("Connection: close");
 			client.println();
-						
-			if (sendIndex) {			
+
+			if (sendIndex) {
 				client.print("{\"id\":\"");
 				client.print(_deviceName);
 				client.print("\",\"type\":\"");
@@ -657,20 +657,20 @@ bool HomeyClass::handleUdp() {
 			_udpServer.endPacket();
 			return true;
 		}
-		
+
 		char buffer[ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE] = {0};
 		_udpServer.read(buffer, ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE-1);
-		
+
 		char* endpoint;
 		char* argument;
-		
+
 		split(buffer, endpoint, argument, '?', ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE);
-		
-		
+
+
 		_request.endpoint = endpoint;
 		_request.args = argument;
 		_request.isPost = true; //UDP packets always POST data
-		
+
 		handleRequest();
 
 		*/_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
@@ -709,7 +709,7 @@ bool HomeyClass::handleUdp() {
 				i++;
 			}
 			_udpServer.print("}}");
-			
+
 		/*} else {
 			_udpServer.print("{\"t\":\"");
 			_udpServer.print(_response.type);
@@ -726,7 +726,7 @@ bool HomeyClass::handleUdp() {
 
 bool HomeyClass::_emit(const char* name, const char* argType, const String& triggerValue, const char* evType) {
 	yield();
-	
+
 	HomeyFunction* function = find(name, evType);
 	if (function!=NULL) {
 		//DEBUG_PRINTLN("emit has matching api");
@@ -736,10 +736,10 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 			//DEBUG_PRINTLN("SET VALUE");
 		}
 	}
-	
+
 	if (_master_host[0]==0) return false; //Master IP not set: this function is doomed to fail so exit before doing anything
 	CLIENT_TYPE client;
-	if (client.connect(_master_host, _master_port)) {		
+	if (client.connect(_master_host, _master_port)) {
 		client.print("POST /emit/");
 		client.print(evType);
 		client.print('/');
@@ -749,32 +749,32 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 		client.println("Connection: close");
 		client.print("Content-Length: ");
 		client.println(9+13+2+strlen(argType)+triggerValue.length());
-		
+
 		client.println();
 		client.print("{\"type\":\""); //9
 		client.print(argType);
 		client.print("\",\"argument\":"); //13
 		client.print(triggerValue);
 		client.println('}'); //2
-		
+
 		uint8_t timeout = 200;
 		while (client.available()==0) {
 			delay(1);
 			timeout--;
 			if (timeout<1) break;
 		}
-				
+
 		String response = "";
-		
+
 		while (client.available()>0) {
 			char c = client.read();
 			response += c;
 		}
-		
+
 		DEBUG_PRINTLN("-EMIT-");
 		DEBUG_PRINTLN(response);
 		DEBUG_PRINTLN("------");
-		
+
 		client.stop();
 		yield();
 		return true;

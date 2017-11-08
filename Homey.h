@@ -22,7 +22,7 @@
 #define REQUEST_TIMEOUT 100
 
 #define MAX_NAME_LENGTH 24
-#define MAX_TYPE_LENGTH 4
+#define MAX_TYPE_LENGTH 5
 
 #define TYPE_ACTION 		"act"
 #define TYPE_CONDITION		"con"
@@ -52,7 +52,7 @@
 #if defined(ARDUINO_ARCH_ESP8266)
 	#include <ESP8266WiFi.h>
 	#include <WiFiClient.h>
-	#include <WiFiUdp.h>		
+	#include <WiFiUdp.h>
 	#define CLIENT_TYPE WiFiClient
 	#define UDP_SERVER_TYPE WiFiUDP
 	#define TCP_SERVER_TYPE WiFiServer
@@ -100,10 +100,10 @@ struct HomeyFunction {
 	HomeyFunction(char* newName, char* newType, CallbackFunction newCallback, bool needsValue = false);
 	HomeyFunction* prevFunction;	//Linked list (<)
 	HomeyFunction* nextFunction;	//Linked list (>)
-	char* type;						//Type
-	char* name;						//Name
-	String* valueType;				//Type of value (if needed)
-	String* value;					//Value (if needed) (formatted!)
+	char* type;										//Type
+	char* name;										//Name
+	String* valueType;						//Type of value (if needed)
+	String* value;								//Value (if needed) (formatted!)
 	CallbackFunction callback;		//Function pointer
 };
 
@@ -129,7 +129,7 @@ class HomeyClass {
 		void setName(const String& deviceName);									//Change the device identifier
 		String getClass();														//Get the current device class
 		void setClass(const String& deviceClass);								//Change the device class
-				
+
 		//API endpoint management
 		bool addAction(const String& name, CallbackFunction fn);				//Wrapper for on(String&, String&,...) that supplies type as TYPE_ACTION
 		bool addCondition(const String& name, CallbackFunction fn);				//Wrapper for on(String&, String&,...) that supplies type as TYPE_CONDITION
@@ -142,7 +142,7 @@ class HomeyClass {
 		bool removeCondition(const char* name);									//Wrapper for remove(...) that supplies type as TYPE_CONDITION
 		bool removeCapability(const char* name);								//Wrapper for remove(...) that supplies type as TYPE_CAPABILITY
 		void clear();															//Removes all endpoints
-		
+
 		//Send a trigger event to a Homey flow
 		bool trigger(const String& name);										//Wrapper for emit(...) with NULL argument and type set to trigger
 		bool trigger(const String& name, const char* value);					//Wrapper for emit(...) with char array argument and type set to trigger
@@ -151,8 +151,8 @@ class HomeyClass {
 		bool trigger(const String& name, int value);							//Wrapper for emit(...) with int argument and type set to trigger
 		bool trigger(const String& name, float value);							//Wrapper for emit(...) with float argument and type set to trigger
 		bool trigger(const String& name, double value);							//Wrapper for emit(...) with double argument and type set to trigger
-		
-		
+
+
 		//Update a capability value
 		bool setCapabilityValue(const String& name);							//Wrapper for emit(...) with NULL argument and type set to capability
 		bool setCapabilityValue(const String& name, const char* value);			//Wrapper for emit(...) with char array argument type set to capability
@@ -161,7 +161,7 @@ class HomeyClass {
 		bool setCapabilityValue(const String& name, int value);					//Wrapper for emit(...) with int argument type set to capability
 		bool setCapabilityValue(const String& name, float value);				//Wrapper for emit(...) with float argument type set to capability
 		bool setCapabilityValue(const String& name, double value);				//Wrapper for emit(...) with double argument type set to capability
-		
+
 		//Send a raw event (not handled by Homeyduino app!)
 		bool emit(const String& name);											//Wrapper for emit(...) with NULL argument and type set to raw
 		bool emit(const String& name, const char* value);						//Wrapper for emit(...) with char array argument type set to raw
@@ -170,7 +170,7 @@ class HomeyClass {
 		bool emit(const String& name, int value);								//Wrapper for emit(...) with int argument type set to raw
 		bool emit(const String& name, float value);								//Wrapper for emit(...) with float argument type set to raw
 		bool emit(const String& name, double value);							//Wrapper for emit(...) with double argument type set to raw
-		
+
 		//Set the answer returned
 		void returnIndex();														//Return the API index
 		void returnNothing();													//Return nothing
@@ -181,22 +181,22 @@ class HomeyClass {
 		void returnResult(int result);											//Return an int
 		void returnResult(float result);										//Return a float
 		void returnResult(double result);										//Return a double
-		
+
 		//Handle incoming connections
 		void loop();															//Wrapper that runs both TCP and UDP handlers
 		bool rqType();															//Current request type: GET = false, POST = true
-		
+
 		//Public variables
 		String value;															//The argument supplied by the Homey flow
 		bool rcEnabled;															//State of RC features
-		
+
 	private:
 		//Helper functions
 		bool split(char* buffer, char*& a, char*& b, char separator,			//Splits a buffer into separate parts
-		uint16_t size);				
+		uint16_t size);
 		char* copyCharArray(const char* input, uint16_t maxlen);				//Allocates memory and copies a char array
 		bool parseHttpHeaders(CLIENT_TYPE* client);								//Parse HTTP headers and fill _request
-		
+
 		//API endpoint management
 		bool on(const char* name, const char* type, CallbackFunction cb,		//Create an endpoint
 				bool needsValue = false);
@@ -208,14 +208,14 @@ class HomeyClass {
 		void handleRequest();													//Handle API call
 		bool handleTcp();														//Handle incoming TCP connections
 		bool handleUdp();														//Handle incoming UDP connections
-				
+
 		//Event transmission
 		bool _emit(const char* name, const char* argType, const String& value,	//Emit an event
 		const char* evType);
-		
+
 		//Set the answer returned
 		void returnResult(const String& response, const String& type);			//Set the return value
-						
+
 		//Internal variables
 		TCP_SERVER_TYPE _tcpServer;												//The TCP server
 		UDP_SERVER_TYPE _udpServer;												//The UDP server
