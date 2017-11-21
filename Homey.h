@@ -5,7 +5,7 @@
 
 // Settings
 //#define HOMEY_USE_ETHERNET_V1 //Uncomment when using a legacy ethernet shield
-//#define DEBUG_ENABLE //Uncomment to have the library print debug messages
+#define DEBUG_ENABLE //Uncomment to have the library print debug messages
 
 // Advanced settings
 #define DEBUG_PRINTER		Serial			//Which class to use for printing debug mesages
@@ -185,6 +185,7 @@ class HomeyClass {
 		//Handle incoming connections
 		void loop();															//Wrapper that runs both TCP and UDP handlers
 		bool rqType();															//Current request type: GET = false, POST = true
+		String rqEndpoint();											//Current request endpoint
 
 		//Public variables
 		String value;															//The argument supplied by the Homey flow
@@ -208,6 +209,9 @@ class HomeyClass {
 		void handleRequest();													//Handle API call
 		bool handleTcp();														//Handle incoming TCP connections
 		bool handleUdp();														//Handle incoming UDP connections
+
+		void streamFlush(Stream* s);
+		void streamWriteIndex(Stream* s);
 
 		//Event transmission
 		bool _emit(const char* name, const char* argType, const String& value,	//Emit an event
