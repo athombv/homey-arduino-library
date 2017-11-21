@@ -276,6 +276,10 @@ bool HomeyClass::rqType() {
 	return _request.isPost;
 }
 
+String HomeyClass::rqEndpoint() {
+	return _request.endpoint;
+}
+
 /* PRIVATE FUNCTIONS */
 
 bool HomeyClass::split(char* buffer, char*& a, char*& b, char separator, uint16_t size)
@@ -305,7 +309,7 @@ char* HomeyClass::copyCharArray(const char* input, uint16_t maxlen)
 }
 
 bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
-	DEBUG_PRINTLN("-----");
+	//DEBUG_PRINTLN("-----");
 	_request.endpoint = "";
 	_request.args = "";
 	_request.isPost = false;
@@ -320,8 +324,8 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 		if (to<1) break;
 	}
 
-	DEBUG_PRINT("timeout: ");
-	DEBUG_PRINTLN(to);
+	//DEBUG_PRINT("timeout: ");
+	//DEBUG_PRINTLN(to);
 
 	//Read first header into buffer
 	for (uint16_t i = 0; i<HEADER_MAX_SIZE; i++) {
@@ -332,8 +336,8 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 		if (c!='\r') buffer[i] = c;
 	}
 
-	DEBUG_PRINT("First header: ");
-	DEBUG_PRINTLN(buffer);
+	//DEBUG_PRINT("First header: ");
+	//DEBUG_PRINTLN(buffer);
 
 	char* requestType;
 	char* request;
@@ -444,15 +448,23 @@ HomeyFunction* HomeyClass::find(const char* name, const char* type)
 
 	if ((name[0]==0)&&(type[0]==0)) return item; //Empty query returns first item (used for "clear" function)
 
+	uint16_t inputtypelen = strnlen(type,MAX_TYPE_LENGTH);
+	uint16_t inputnamelen = strnlen(name,MAX_NAME_LENGTH);
+
 	while (item!=NULL) {
-		uint16_t typelen = strnlen(item->type,MAX_TYPE_LENGTH);
-		uint16_t namelen = strnlen(item->name,MAX_NAME_LENGTH);
-		if ((strncmp(item->type,type,typelen)==0)&&(strncmp(item->name,name,namelen)==0)) {
-			return item;
+		uint16_t itemtypelen = strnlen(item->type,MAX_TYPE_LENGTH);
+		uint16_t itemnamelen = strnlen(item->name,MAX_NAME_LENGTH);
+		if (
+				(itemtypelen==inputtypelen) &&					//Type length matches
+				(itemnamelen==inputnamelen) &&					//Name length matches
+				(strncmp(item->type,type,itemtypelen)==0) &&	//Type string matches
+				(strncmp(item->name,name,itemnamelen)==0)		//Name String matches
+			) {
+			return item;										//Found match!
 		}
 		item = item->nextFunction;
 	}
-	return NULL; //Not found
+	return NULL;												//Not found
 }
 
 bool HomeyClass::remove(const char* name, const char* type)
@@ -597,40 +609,7 @@ bool HomeyClass::handleTcp() {
 			client.println();
 
 			if (sendIndex) {
-				client.print("{\"id\":\"");
-				client.print(_deviceName);
-				client.print("\",\"type\":\"");
-				client.print(DEVICE_TYPE);
-				client.print("\",\"class\":\"");
-				client.print(_deviceClass);
-				client.print("\",\"arch\":\"");
-				client.print(arduino_arch);
-				client.print("\",\"numDigitalPins\":\"");
-				client.print(NUM_DIGITAL_PINS);
-				client.print("\",\"numAnalogInputs\":\"");
-				client.print(NUM_ANALOG_INPUTS);
-				client.print("\",\"rc\":\"");
-				client.print(rcEnabled);
-				client.print("\",\"master\":{\"host\":\"");
-				client.print(_master_host);
-				client.print("\", \"port\":");
-				client.print(_master_port);
-				client.print("},\"api\":{");
-				uint16_t i = 0;
-				HomeyFunction *item = firstHomeyFunction;
-				while (item!=NULL) {
-					client.print("\"");
-					client.print(i);
-					client.print("\":{\"name\":\"");
-					client.print(item->name);
-					client.print("\", \"type\":\"");
-					client.print(item->type);
-					client.print("\"}");
-					item = item->nextFunction;
-					if (item!=NULL) client.print(',');
-					i++;
-				}
-				client.print("}}");
+				streamWriteIndex(&client);
 			} else {
 				client.print("{\"t\":\"");
 				client.print(_response.type);
@@ -647,97 +626,132 @@ bool HomeyClass::handleTcp() {
 	return false;
 }
 
+void HomeyClass::streamFlush(Stream* s) {
+	///DEBUG_PRINT("Flushing message: ");
+	while(s->available()) s->read(); //DEBUG_PRINT((char) s->read()); //Read until EOF
+	//DEBUG_PRINTLN();
+}
+
+void HomeyClass::streamWriteIndex(Stream* s) {
+	//Id field
+	s->print("{\"id\":\"");
+	s->print(_deviceName);
+	s->print('"');
+	
+	//Type field
+	s->print(",\"type\":\"");
+	s->print(DEVICE_TYPE);
+	s->print('"');
+	
+	//Class field
+	s->print(",\"class\":\"");
+	s->print(_deviceClass);
+	s->print('"');
+	
+	//RC field
+	if (rcEnabled) {
+		s->print(",\"rc\":{");
+		s->print("\"arch\":\"");
+		s->print(arduino_arch);
+		s->print("\",\"numDigitalPins\":");
+		s->print(NUM_DIGITAL_PINS);
+		s->print(",\"numAnalogInputs\":");
+		s->print(NUM_ANALOG_INPUTS);
+		s->print('}');
+	}
+	
+	//Master field
+	s->print(",\"master\":{\"host\":\"");
+	s->print(_master_host);
+	s->print("\", \"port\":");
+	s->print(_master_port);
+	s->print('}');
+	
+	//Api field
+	s->print(",\"api\":[");
+	uint16_t i = 0;
+	HomeyFunction *item = firstHomeyFunction;
+	while (item!=NULL) {
+		s->print("{\"name\":\"");
+		s->print(item->name);
+		s->print("\", \"type\":\"");
+		s->print(item->type);
+		s->print("\"}");
+		item = item->nextFunction;
+		if (item!=NULL) s->print(',');
+		i++;
+	}
+	s->print("]}");
+}
+
+/*void HomeyClass::streamWriteIndex(Stream* s) {
+	s->print("{\"id\":\"");
+	s->print(_deviceName);
+	s->print("\",\"type\":\"");
+	s->print(DEVICE_TYPE);
+	s->print("\",\"class\":\"");
+	s->print(_deviceClass);
+	s->print("\",\"arch\":\"");
+	s->print(arduino_arch);
+	s->print("\",\"numDigitalPins\":\"");
+	s->print(NUM_DIGITAL_PINS);
+	s->print("\",\"numAnalogInputs\":\"");
+	s->print(NUM_ANALOG_INPUTS);
+	s->print("\",\"rc\":\"");
+	s->print(rcEnabled);
+	s->print("\",\"master\":{\"host\":\"");
+	s->print(_master_host);
+	s->print("\", \"port\":");
+	s->print(_master_port);
+	s->print("},\"api\":{");
+	uint16_t i = 0;
+	HomeyFunction *item = firstHomeyFunction;
+	while (item!=NULL) {
+		s->print("\"");
+		s->print(i);
+		s->print("\":{\"name\":\"");
+		s->print(item->name);
+		s->print("\", \"type\":\"");
+		s->print(item->type);
+		s->print("\"}");
+		item = item->nextFunction;
+		if (item!=NULL) s->print(',');
+		i++;
+	}
+	s->print("}}");
+}
+*/
+
 bool HomeyClass::handleUdp() {
 	int packetSize = _udpServer.parsePacket();
 	if (packetSize) {
-		/*if (packetSize>=ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE) {
-			_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
-			const char err[] = "{\"error\":\"packet too large\"}";
-			_udpServer.write((uint8_t*) err, strlen(err));
-			_udpServer.endPacket();
-			return true;
-		}
-
-		char buffer[ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE] = {0};
-		_udpServer.read(buffer, ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE-1);
-
-		char* endpoint;
-		char* argument;
-
-		split(buffer, endpoint, argument, '?', ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE);
-
-
-		_request.endpoint = endpoint;
-		_request.args = argument;
-		_request.isPost = true; //UDP packets always POST data
-
-		handleRequest();
-
-		*/_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
-		/*if (_response.code==1) { //Return the index*/
-			_udpServer.print("{\"id\":\"");
-			_udpServer.print(_deviceName);
-			_udpServer.print("\",\"type\":\"");
-			_udpServer.print(DEVICE_TYPE);
-			_udpServer.print("\",\"class\":\"");
-			_udpServer.print(_deviceClass);
-			_udpServer.print("\",\"arch\":\"");
-			_udpServer.print(arduino_arch);
-			_udpServer.print("\",\"numDigitalPins\":\"");
-			_udpServer.print(NUM_DIGITAL_PINS);
-			_udpServer.print("\",\"numAnalogInputs\":\"");
-			_udpServer.print(NUM_ANALOG_INPUTS);
-			_udpServer.print("\",\"rc\":\"");
-			_udpServer.print(rcEnabled);
-			_udpServer.print("\",\"master\":{\"host\":\"");
-			_udpServer.print(_master_host);
-			_udpServer.print("\", \"port\":");
-			_udpServer.print(_master_port);
-			_udpServer.print("},\"api\":{");
-			uint16_t i = 0;
-			HomeyFunction *item = firstHomeyFunction;
-			while (item!=NULL) {
-				_udpServer.print("\"");
-				_udpServer.print(i);
-				_udpServer.print("\":{\"name\":\"");
-				_udpServer.print(item->name);
-				_udpServer.print("\", \"type\":\"");
-				_udpServer.print(item->type);
-				_udpServer.print("\"}");
-				item = item->nextFunction;
-				if (item!=NULL) _udpServer.print(',');
-				i++;
-			}
-			_udpServer.print("}}");
-
-		/*} else {
-			_udpServer.print("{\"t\":\"");
-			_udpServer.print(_response.type);
-			_udpServer.print("\",\"r\":");
-			if (_response.response=="") _response.response = "\"\"";
-			_udpServer.print(_response.response);
-			_udpServer.print("}");
-		}*/
+		streamFlush(&_udpServer);
+		_udpServer.beginPacket(_udpServer.remoteIP(), _udpServer.remotePort());
+		streamWriteIndex(&_udpServer);
 		_udpServer.endPacket();
 		return true;
 	}
-	return false; //Handle TCP next
+	return false;
 }
 
 bool HomeyClass::_emit(const char* name, const char* argType, const String& triggerValue, const char* evType) {
+
+	/* Give OS control first */
 	yield();
 
+	/*Set value if corresponding API call exists and has value storage enabled */
 	HomeyFunction* function = find(name, evType);
 	if (function!=NULL) {
-		//DEBUG_PRINTLN("emit has matching api");
 		if (function->value!=NULL) {
 			*(function->value) = triggerValue;
 			*(function->valueType) = argType;
-			//DEBUG_PRINTLN("SET VALUE");
 		}
 	}
 
-	if (_master_host[0]==0) return false; //Master IP not set: this function is doomed to fail so exit before doing anything
+	/* Check if master has been configured */
+	if (_master_host[0]==0) return false;
+
+	/* Execute request */
 	CLIENT_TYPE client;
 	if (client.connect(_master_host, _master_port)) {
 		client.print("POST /emit/");
@@ -764,17 +778,10 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 			if (timeout<1) break;
 		}
 
-		String response = "";
-
-		while (client.available()>0) {
-			char c = client.read();
-			response += c;
-		}
-
-		DEBUG_PRINTLN("-EMIT-");
-		DEBUG_PRINTLN(response);
-		DEBUG_PRINTLN("------");
-
+		//streamFlush(client); //Flush response
+		//(EthernetClient does not support cast to Stream...)
+		while(client.available()) client.read(); //Flush response
+		
 		client.stop();
 		yield();
 		return true;
