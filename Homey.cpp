@@ -11,9 +11,10 @@ HomeyClass::HomeyClass( uint16_t port )
 	_master_port = 9999;
 }
 
-void HomeyClass::begin(const String& name)
+void HomeyClass::begin(const String& name, const String& type)
 {
 	_deviceName = name;
+	_deviceType = type;
 	_tcpServer.begin();
 	_udpServer.begin(_port);
 }
@@ -640,7 +641,7 @@ void HomeyClass::streamWriteIndex(Stream* s) {
 	
 	//Type field
 	s->print(",\"type\":\"");
-	s->print(DEVICE_TYPE);
+	s->print(_deviceType);
 	s->print('"');
 	
 	//Class field
@@ -688,7 +689,7 @@ void HomeyClass::streamWriteIndex(Stream* s) {
 	s->print("{\"id\":\"");
 	s->print(_deviceName);
 	s->print("\",\"type\":\"");
-	s->print(DEVICE_TYPE);
+	s->print(_deviceType);
 	s->print("\",\"class\":\"");
 	s->print(_deviceClass);
 	s->print("\",\"arch\":\"");
