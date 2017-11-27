@@ -123,7 +123,7 @@ class HomeyClass {
 	public:
 		//Library and device management
 		HomeyClass( uint16_t port = 46639 ); 									//Class constructor (port 46639 is t9 for HOMEY)
-		void begin(const String& name);											//Start responding to queries
+		void begin(const String& name, const String& type = DEVICE_TYPE);		//Start responding to queries
 		void stop();															//Stop responding to queries
 		String getName();														//Get the current device identifier
 		void setName(const String& deviceName);									//Change the device identifier
@@ -225,6 +225,7 @@ class HomeyClass {
 		UDP_SERVER_TYPE _udpServer;												//The UDP server
 		uint16_t _port;															//The listening port for incoming connections
 		String _deviceName;														//The device identifier
+		String _deviceType;														//The device type
 		String _deviceClass;													//The device class
 		HomeyFunction *callbacks[MAXCALLBACKS];									//The registered actions and conditions
 		WebRequest _request;													//API request parameter storage

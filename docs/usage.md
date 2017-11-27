@@ -111,3 +111,22 @@ If your device is of a certain class then you can set the class by calling ```Ho
 Adding a capability is done by calling ```Homey.addCapability("name");``` or ```Homey.addCapability("name", <function>);```. Depending on the type of capability. For example the ```measure_temperature``` does not require a callback function since it can not be set by Homey.
 
 Setting the value of a capability is done by calling ```Homey.setCapabilityValue("name", <value>);```. Where value can be of a ```String```, ```bool```, ```int```, ```float``` or ```double``` type, depending on the type of capability.
+
+# Remote configurations
+
+Instead of creating your own sketch it is also possible to configure your Arduino from within the Homey interface. For this to work you will need to flash your board with the provided remote-configuration sketch, which can be found in the examples menu.
+
+After flashing the remote configuration sketch pins can be configured to one of the following modes:
+
+| Mode                                   | Description                                                                                                                                                                     |
+|----------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Digital input                          | A basic digital input pin, can be interacted with using the ```Digital input``` condition flowcard                                                                              |
+| Digital input with pull-up             | Same as ```Digital input``` but with the built-in pull-up resistor enabled                                                                                                      |
+| Digital input with trigger             | Same as ```Digital input``` but when the pin changes a trigger will be sent so that a flow can be triggerd with the Digital input trigger flowcard                              |
+| Digital input with pull-up and trigger | Same as above but with both pull-up and trigger functionality enabled                                                                                                           |
+| Digital output                         | A basic digital output, can be interacted with using the ```Digital output``` action flowcard                                                                                   |
+| Analog input                           | A basic Analog input pin, can be interacted with using the ```Analog input``` condition flowcard                                                                                |
+| Analog input with pull-up              | Same as ```Analog input``` but with the built-in pull-up resistor enabled                                                                                                       |
+| Analog input with trigger              | Same as ```Analog input``` but when the pin changes a trigger will be sent so that a flow can be triggerd with the Analog input trigger flowcard                                |
+| Analog input with pull-up and trigger  | Same as above but with both pull-up and trigger functionality enabled                                                                                                           |
+| Analog output                          | An analog output, can be interacted with using the ```Analog output``` action flowcard. Depending on hardware capabilities this pin will be either a PWM output or a DAC output |
