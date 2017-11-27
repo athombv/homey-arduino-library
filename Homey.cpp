@@ -639,6 +639,9 @@ void HomeyClass::streamWriteIndex(Stream* s) {
 	s->print(_deviceName);
 	s->print('"');
 	
+	//Version
+	s->print(",\"version\":\""HOMEYDUINO_VERSION"\"");
+	
 	//Type field
 	s->print(",\"type\":\"");
 	s->print(_deviceType);
