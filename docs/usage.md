@@ -180,7 +180,7 @@ void setOutput(bool value) {
 
 # 3. Remote configuration
 
-Instead of creating your own sketch it is also possible to configure your Arduino from within the Homey interface. For this to work you will need to flash your board with the provided remote-configuration sketch, which can be found in the examples menu.
+Instead of creating your own sketch it is also possible to configure your Arduino from within the Homey interface. For this to work you will need to flash your board with the provided ```remote-configuration``` sketch, which can be found in the examples menu.
 
 After flashing the remote configuration sketch pins can be configured to one of the following modes:
 
