@@ -1,11 +1,28 @@
 # Usage & getting started
 
-This guide will help you to get started with using the Homeyduino Arduino library and application.
+This guide will help you to get started with using Homeyduino.
 
-## 1. Installation
+## Hardware prerequisites
+Homeyduino is compatible with all ESP8266 and ESP32 based development boards as well as Arduino boards compatible with the [Arduino Ethernet v2 shield](https://store.arduino.cc/arduino-ethernet-shield-2).
+
+Support for using the [legacy Arduino Ethernet v1 shield](https://store.arduino.cc/arduino-ethernet-shield-without-poe-module) is also available, but you will need to change a configuration setting in one of the libraries files, click [here](#using-the-legacy-arduino-ethernet-shield-v1) for more information.
+
+Other networked Arduino devices such as Arduino Yun and the Arduino GSM shield are currently not supported.
+
+The software has been tested on the following board configurations:
+ - Arduino UNO with ethernet v2 shield
+ - Arduino Leonardo with ethernet v2 shield
+ - Arduino Due with ethernet v2 shield
+ - ESP8266 NodeMCU v1
+ - ESP32 devkit
+
+## Software prerequisites
+To get started make sure you have installed both the Arduino IDE and the Homey desktop application installed. Before trying to build a project using the Homeyduino software make sure that your Arduino setup is fully functional by uploading for example the blink sketch to your Arduino board.
+
+## Installation
 Download the Homey Arduino library as a .zip file from Github. You can install this file by navigating to ```Sketch```>```Include Library```> ```Add .ZIP library...``` and selecting the .zip file. The Homey app can be installed using the [application store](https://apps.athom.com/app/com.athom.homeyduino).
 
-## 2. The basics
+## The basics
 Now that everything is installed and ready for use let's get started with the basics.
 
 To be able to use the library into your Arduino sketch you have to include the header file of the Homey arduino library by adding ```#include <Homey.h>``` to the top of your Arduino sketch.
@@ -83,7 +100,7 @@ void loop() {
 
 To allow for easier testing we suggest you add code to utilize the ```Serial``` library to print a log to the serial monitor. More advanced getting-started sketches are included with the library and can be opened in the Arduino IDE by navigating to the  ```File > Examples > Homeyduino``` menu.
 
-## Using the legacy ethernet shield v1
+## Using the legacy Arduino ethernet shield v1
 
 Navigate to the libraries folder in the Arduino folder on your computer. Then find the file "Homey.h" in the homeyduinos directory. Open this file using a text editor and remove the ```//``` marker from the ```//#define HOMEY_USE_ETHERNET_V1``` line so that it becomes ```#define HOMEY_USE_ETHERNET_V1``` to switch to ethernet shield v1 support instead of ethernet shield v2 support.
 
@@ -178,7 +195,7 @@ void setOutput(bool value) {
 
 \* In case the output is set without Homey, for example using a button, the new state must be sent to Homey. This can be done using the ```setCapabilityValue``` function. The setCapabilityValue function is not needed if Homey is the only device setting the capability value, since Homey automatically expects it's new value to be applied.
 
-# 3. Remote configuration
+# 2. Remote configuration
 
 Instead of creating your own sketch it is also possible to configure your Arduino from within the Homey interface. For this to work you will need to flash your board with the provided ```remote-configuration``` sketch, which can be found in the examples menu.
 
