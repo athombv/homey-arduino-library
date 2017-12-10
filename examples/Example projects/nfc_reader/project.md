@@ -130,7 +130,7 @@ After we made sure everything works as expected we made the project smaller by t
 ![final1](final1.jpg)
 ![final2](final2.jpg)
 
-#6. The Homey flowcard
+# 6. The Homey flowcard
 The identification numer of a compatible RFID card will be sent to homey as a text string. By adding the "Action [text]" flowcard of the device to your flow and selecting the "card" trigger your flow will be triggered whenever a card is scanned. The autocomplete field will only show the "card" trigger once a card has been succesfully scanned at least once. If it is not shown (yet) you can always type in the name of the trigger manually.
 
 ![flowcard](flowcard.png)
