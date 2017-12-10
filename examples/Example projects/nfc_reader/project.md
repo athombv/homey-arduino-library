@@ -1,4 +1,4 @@
-#An NFC/RFID reader
+# A NFC/RFID reader
 
 ## 1. Introduction
 Homey can read NFC cards like your public transport card. This feature has a lot of potential applications. But for many of those applications having to physically touch your NFC card to your Homey can make implementing your NFC ideas a bit of a hassle.
