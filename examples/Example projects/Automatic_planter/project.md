@@ -3,20 +3,27 @@
 ## 1. Introduction
 At the Athom office we have a very nice planter that adds some greenery to our place of work. However each week one of us needed to manually water the plants. Unacceptable of course, so we set out to automate the process.
 
-## 2. Required hardware
+## 2. Parts
 This project is based around an [Arduino Uno](https://store.arduino.cc/genuino-uno-rev3) combined with an [Arduino Ethernet Shield](https://store.arduino.cc/arduino-ethernet-shield-2).
 
-Full parts list
+Required parts
 * An [Arduino Uno](https://store.arduino.cc/genuino-uno-rev3)
 * An [Arduino Ethernet Shield](https://store.arduino.cc/arduino-ethernet-shield-2)
 * A breadboard
 * A 12v DC wall-plug adapter
 * A small 12v water pump (We've used a [DC-1020 pump from Aliexpress](https://www.aliexpress.com/w/wholesale-dc.html?site=glo&SearchText=dc-1020))
 * A piece of tubing
+* A N-type mosfet (We've used a HUF75545P3 mosfet)
+* A 1KOhm resistor for use with the pump MOSFET
+
+Optional parts
 * A [moisture sensor](https://www.aliexpress.com/wholesale?SearchText=moisture+sensor)
 * A [float sensor](https://www.aliexpress.com/wholesale?SearchText=float+sensor)
-* A N-type mosfet (We've used a HUF75545P3 mosfet)
-* Two 1KOhm resistors
+* A 1KOhm resistor per moisture sensor (only needed for the sensors without built-in transistor)
+* A 1KOhm resistor for the float sensor (the internal pull-up feature that most Arduino boards have can be used as well)
+
+
+![required-parts](pump_parts.jpg)
 
 ## 3. Getting a base to work with
 To begin we attached our breadboard and our Arduino Uno to a piece of wood using adhesive.
@@ -25,7 +32,7 @@ during the prototyping phase.
 
 We placed the ethernet shield on top of the Arduino Uno.
 
-## 4. Controlling a pump using the Arduino
+## 4. Controlling a pump using an Arduino
 The 12v pump can not be connected to the Arduino pin because the pump requires a lot more power than the Arduino can deliver. To amplify the signal from the Arduino pin we will use a N-type mosfet.
 
 Since this project mainly focusses on connecting our planter to Homey we will just give a short description on how we connected everything. For more information on using transistors and mosfets with Arduino we suggest looking for tutorials like the Sparkfun tutorial on using transistors found [here](https://learn.sparkfun.com/tutorials/transistors).
@@ -60,6 +67,10 @@ void loop() {
   delay(500);
 }
 ```
+
+This is what our prototype looks like:
+
+![pump-prototype](pump_proto.jpg)
 
 ## 5. Connecting to Homey
 
@@ -156,7 +167,6 @@ void loop() {
 
   if (currentMillis-previousMillis >= 1000) { //Code in this if statement is run once every second
     previousMillis = currentMillis;
-    Serial.println("Hello");
 
     if (pumpTimer>0) { //If the pump is active
       pumpTimer = pumpTimer - 1; //Decrease the pump timer
@@ -179,8 +189,145 @@ After pairing the device you can control the pump by adding the device to the ac
 
 The "stop" action can be used without an argument, it will stop the pump instantly.
 
+## 7. Adding a float sensor
+Now that we connected our water pump to Homey we can automatically water our plants, but what about times when the tank becomes empty without us noticing?
 
+To make sure that we are notified of an empty tank and to prevent the pump from running without water (to avoid damage to the pump) we added a float sensor to our setup. The float sensor we bought works as a switch. We suspended the float sensor in our water tank at the correct height by connecting it to a piece of coated iron wire which we cut to length and stuck to the top of the jerrycan with some tape.
+
+![float-sensor](float.jpg)
+
+Adding the float sensor to our Arduino project is suprisingly simple. The Arduino Uno on which we based this project has an internal pull-up resistor for all it's pins. This means that a resistor in the Arduino can pulls the input to the supply voltage, while the external sensor (which acts like a switch) just pulls the pin down by connecting it to ground.
+
+So the only connections needed to make the float work are as follows:
+
+| Float pin   | Arduino pin      |
+|-------------|------------------|
+| Wire 1      | Pin 3            |
+| Wire 2      | Ground           |
+
+To read the float sensor the pin has to be configured as an input with pull-up enabled.
+
+```cpp
+  pinMode(3, INPUT_PULLUP);
+```
+
+Reading the sensor can then be done using ```digitalRead(3);```, just like any other input.
+
+Our sensor, which acts like a switch, closes when it is not floating and opens when it is floating. The pull-up pulls the pin high whenever the switch is open, resulting in the following relation:
+
+| Pin state | Meaning                                           |
+|-----------|---------------------------------------------------|
+| HIGH      | The switch is open, so there is water in the tank |
+| LOW       | The switch is closed, so the tank is empty        |
+
+Your sensor could act differently, so you might have to change the sketch a bit to accommodate that instead.
+
+For reading the sensor using Homey we added the following code to our sketch:
+
+```cpp
+...
+bool previousFloatState = false;
+...
+
+void setup() {
+  ...
+  pinMode(3, INPUT_PULLUP);
+  ...
+  Homey.addCondition("float", onFloatCondition);
+}
+
+void onPump() {
+  ...
+  if (!previousFloatState) return Homey.returnError("Tank empty!");
+  ...
+}
+
+void loop() {
+  ...
+  <in the interval>
+    bool currentFloatState = digitalRead(PIN_FLOAT);
+
+    if (previousFloatState != currentFloatState) {
+      previousFloatState = currentFloatState;
+      Homey.trigger("float", currentFloatState);
+      if (!currentFloatState) { //Tank empty
+        onStop();
+      }
+    }
+  ...
+}
+
+void onFloatCondition() {
+  return Homey.returnResult(digitalRead(3));
+}
+```
+
+This exposes the float sensor both as a trigger and as a condition. Additionally it prevents the pump from running when the tank is empty.
+
+
+### And on a board that does not have internal pull-up resistors?
+
+Should you want to replicate this on a platform that does not have internal pull-up support then you could replace the functionality using a resistor.
+
+In that case you would still connect the sensor like described earlier, however you would need to add a resistor (with a value of for example 1KOhm) between the input pin on the Arduino and the 5v (or 3.3v, depening on the I/O voltage of your board) supply pin. For most Arduino boards the I/O voltage is 5 volt and for most ESP8266 and ESP32 boards the I/O voltage is 3.3v. Check the I/O voltage before connecting the resistor, for connecting the resistor to the wrong supply voltage could cause damage to your board.
+
+When using an external pull-up resistor the pinMode statement would become like this:
+
+```cpp
+  pinMode(3, INPUT);
+```
 
 ## 6. Adding moisture sensors
 
-## 7. Adding a float sensor
+When soil becomes moist it's resistance drops. A moisture sensor measures the resistance of the soil between two electrodes at a set distance.
+
+### Types of moisture sensors
+Some moisture sensors that you buy from stores like [Sparkfun](https://www.sparkfun.com/products/13322) include a small circuit that consists of a resistor divider with a transistor that amplifies the current flowing through the soil.
+
+Most cheap Chinese sensors however do not include this circuit and consist of two wires at a certain distance from each other. For those sensors we suggest creating a simple voltage divider by connecting the analog input of the Arduino to ground through a resistor and to the supply voltage pin (5v or 3.3v) through the sensor.
+
+![moisture-sensor](moisture_sensor.jpg)
+
+### Adding the moisture sensor to the sketch
+
+We connected the moisture sensor to pin A0 on the Arduino.
+
+```cpp
+...
+int previousMoistureSensorValue = 0;
+...
+
+void setup() {
+  ...
+  pinMode(A0, INPUT);
+  ...
+  Homey.addCondition("moisture", onMoistureCondition);
+}
+
+void onPump() {
+  ...
+  if (!previousFloatState) return Homey.returnError("Tank empty!");
+  ...
+}
+
+void loop() {
+  ...
+  <in the interval>
+    bool currentFloatState = digitalRead(PIN_FLOAT);
+
+    if (previousFloatState != currentFloatState) {
+      previousFloatState = currentFloatState;
+      Homey.trigger("float", currentFloatState);
+      if (!currentFloatState) { //Tank empty
+        onStop();
+      }
+    }
+  ...
+}
+
+void onFloatCondition() {
+  return Homey.returnResult(digitalRead(3));
+}
+```
+
+By adding the moisture sensor as a trigger a flow is triggered every time the moisture level changes. This can be used to implement a flow that checks if the moisture level changed below a threshold, allowing Homey to start the pump when necessary. Another approach might be checking of the moisture level as a condition by a flow that is triggered by a time interval, allowing you to make sure the pump isn't started too often.
