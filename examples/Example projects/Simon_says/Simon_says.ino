@@ -4,15 +4,15 @@
 #include <Homey.h>
 
 //Pins
-#define LED_RED     A0
-#define LED_YELLOW  A1
-#define LED_GREEN   A2
-#define LED_BLUE    A3
+#define LED_RED     9
+#define LED_YELLOW  8
+#define LED_GREEN   7
+#define LED_BLUE    6
 
-#define BUTTON_RED    2
-#define BUTTON_YELLOW 3
-#define BUTTON_GREEN  4
-#define BUTTON_BLUE   5
+#define BUTTON_RED    5
+#define BUTTON_YELLOW 4
+#define BUTTON_GREEN  3
+#define BUTTON_BLUE   2
 
 //Settings
 byte mac[] = { 0x58, 0x6F, 0x6D, 0x63, 0x29, 0x00 };
