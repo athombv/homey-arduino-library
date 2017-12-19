@@ -197,7 +197,7 @@ void setOutput(bool value) {
 
 # 2. Remote configuration
 
-Instead of creating your own sketch it is also possible to configure your Arduino from within the Homey interface. For this to work you will need to flash your board with the provided ```remote-configuration``` sketch, which can be found in the examples menu.
+Instead of creating your own sketch it is also possible to configure your Arduino from within the Homey interface. For this to work you will need to flash your board with the [provided](https://github.com/athombv/homey-arduino-library/blob/master/examples/Remote_configuration/Remote_configuration.ino) ```remote-configuration``` sketch, which can be found in the examples menu.
 
 After flashing the remote configuration sketch pins can be configured to one of the following modes:
 
@@ -213,3 +213,17 @@ After flashing the remote configuration sketch pins can be configured to one of 
 | Analog input with trigger              | Same as ```Analog input``` but when the pin changes a trigger will be sent so that a flow can be triggerd with the Analog input trigger flowcard                                |
 | Analog input with pull-up and trigger  | Same as above but with both pull-up and trigger functionality enabled                                                                                                           |
 | Analog output                          | An analog output, can be interacted with using the ```Analog output``` action flowcard. Depending on hardware capabilities this pin will be either a PWM output or a DAC output |
+
+Board support list:
+
+| Board name            | Supported      |
+|-----------------------|----------------|
+| Arduino Un            | Yes            |
+| Arduino Leonardo      | Yes            |
+| Arduino Mega          | Yes            |
+| NodeMCU 1.0 (ESP8266) | Yes            |
+| Other ESP8266 boards  | Maybe*         |
+|                       |                |
+| Other ESP32 boards    |                |
+
+* No, but might be possible. Please create an issue with information on your board. You might also be able to use the "Generic ESP8266" or "Generic ESP32" board options if your board is based around one of those chips.

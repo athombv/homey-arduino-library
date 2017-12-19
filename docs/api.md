@@ -31,3 +31,5 @@
 | Variable           | Type          | Description                                                                                                                                   |
 |--------------------|---------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
 | value 						 | String        | The argument supplied by the Homey flow (can be read from within an action, condition or capability callback)                                 |
+
+## Remote configuration

@@ -1,1 +1,51 @@
+#Names
 Homey	KEYWORD1
+HomeyRc KEYWORD1
+
+#functions
+begin KEYWORD2
+stop KEYWORD2
+getName KEYWORD2
+setName KEYWORD2
+getClass KEYWORD2
+setClass KEYWORD2
+addAction KEYWORD2
+addCondition KEYWORD2
+addCapability KEYWORD2
+addRc KEYWORD2
+findAction KEYWORD2
+findCondition KEYWORD2
+findCapability KEYWORD2
+removeAction KEYWORD2
+removeCondition KEYWORD2
+removeCapability KEYWORD2
+clear KEYWORD2
+trigger KEYWORD2
+setCapabilityValue KEYWORD2
+emit KEYWORD2
+returnIndex KEYWORD2
+returnNothing KEYWORD2
+returnError KEYWORD2
+returnResult KEYWORD2
+loop KEYWORD2
+rqType KEYWORD2
+rqEndpoint KEYWORD2
+
+rcMapPin KEYWORD2
+rcSecureDigitalWrite KEYWORD2
+rcSecureDigitalRead KEYWORD2
+rcSecureAnalogWrite KEYWORD2
+rcSecureAnalogRead KEYWORD2
+rcTriggerRegister KEYWORD2
+rcTriggerRemove KEYWORD2
+rcTriggerRun KEYWORD2
+rcEndpointMode KEYWORD2
+rcEndpointDigitalWrite KEYWORD2
+rcEndpointDigitalRead KEYWORD2
+rcEndpointAnalogWrite KEYWORD2
+rcEndpointAnalogRead KEYWORD2
+rcEnable KEYWORD2
+
+#Variables
+value KEYWORD1
+rcEnabled KEYWORD1

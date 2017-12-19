@@ -265,12 +265,14 @@ void HomeyClass::returnResult(double result)
 	returnResult(String(result), CTYPE_DOUBLE);
 }
 
-void HomeyClass::loop()
+bool HomeyClass::loop()
 {
-	while (handleUdp()) { yield(); }
+	bool result = false;
+	while (handleUdp()) { yield(); result = true; }
 	yield();
-	while (handleTcp()) { yield(); }
+	while (handleTcp()) { yield(); result = true; }
 	yield();
+	return result;
 }
 
 bool HomeyClass::rqType() {
@@ -317,13 +319,17 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 
 	char buffer[HEADER_MAX_SIZE] = {0};
 
-	uint8_t to = REQUEST_TIMEOUT;
-	while (client->available()<10) {
-		delay(1);
-		//DEBUG_PRINTLN("waiting... ("+String(to)+")");
+	/*uint8_t to = REQUEST_TIMEOUT;
+		
+	while (client->available()<20) {
+		delay(2);
+		yield();
 		to--;
 		if (to<1) break;
-	}
+	}*/
+	
+	//Serial.print("HR: ");
+	//Serial.println(client->available());
 
 	//DEBUG_PRINT("timeout: ");
 	//DEBUG_PRINTLN(to);
@@ -563,6 +569,14 @@ void HomeyClass::handleRequest() {
 
 bool HomeyClass::handleTcp() {
 	CLIENT_TYPE client = _tcpServer.available();
+	
+	uint8_t t = 100;
+	while ((client)&&(client.available()<10)&&(t>0)) {
+		delay(1);
+		yield();
+		t--;
+	}
+	
 	if (client) {
 		bool valid = parseHttpHeaders(&client);
 		if (client.connected()) {
@@ -814,3 +828,22 @@ HomeyFunction::HomeyFunction(char* newName, char* newType, CallbackFunction newC
 /* OBJECT CREATION */
 
 HomeyClass Homey;
+
+/* REMOTE CONFIGURATION */
+unsigned long rcLoopPrevMillis = 0;
+
+void HomeyRemoteConfigurationSetup(const String& name)
+{
+	Homey.begin(name);
+	rcEnable();
+}
+
+void HomeyRemoteConfigurationLoop()
+{
+	Homey.loop();
+	unsigned long currentMillis = millis();
+	if(currentMillis - rcLoopPrevMillis > RC_LOOP_INTERVAL) {
+		rcLoopPrevMillis = currentMillis;
+		rcTriggerRun(); //Run RC triggers
+	}
+}

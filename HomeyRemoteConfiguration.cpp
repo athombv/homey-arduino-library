@@ -1,4 +1,4 @@
-#include "HomeyRc.h"
+#include "HomeyRemoteConfiguration.h"
 
 rcTrigger* firstRcTrigger = NULL;
 

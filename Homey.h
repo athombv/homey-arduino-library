@@ -3,18 +3,21 @@
 
 #include "chip.h" //Try to detect used chip
 
+#include "HomeyRemoteConfiguration.h"
+
 // Settings
 //#define HOMEY_USE_ETHERNET_V1 //Uncomment when using a legacy ethernet shield
-#define DEBUG_ENABLE //Uncomment to have the library print debug messages
+//#define DEBUG_ENABLE //Uncomment to have the library print debug messages
 
 // Advanced settings
 #define DEBUG_PRINTER		Serial			//Which class to use for printing debug mesages
 #define DEVICE_TYPE		 	"homeyduino"	//Device type
+#define RC_LOOP_INTERVAL	500
 
 /* -------------- DO NOT EDIT ANYTHING BELOW THIS LINE!  -------------- */
 /* (If you do you might break compatibility with the Homeyduino app...) */
 
-#define HOMEYDUINO_VERSION "0.9.6"
+#define HOMEYDUINO_VERSION "0.9.7"
 
 #define ENDPOINT_MAX_SIZE 17 //16 + null
 #define ARGUMENT_MAX_SIZE 65 //64 + null
@@ -184,7 +187,7 @@ class HomeyClass {
 		void returnResult(double result);										//Return a double
 
 		//Handle incoming connections
-		void loop();															//Wrapper that runs both TCP and UDP handlers
+		bool loop();															//Wrapper that runs both TCP and UDP handlers
 		bool rqType();															//Current request type: GET = false, POST = true
 		String rqEndpoint();											//Current request endpoint
 
@@ -237,5 +240,8 @@ class HomeyClass {
 };
 
 extern HomeyClass Homey;
+
+void HomeyRemoteConfigurationSetup(const String& name);
+void HomeyRemoteConfigurationLoop();
 
 #endif
