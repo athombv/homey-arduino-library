@@ -33,7 +33,7 @@
 		A16,
 		A17,
 		A18,
-		A19	
+		A19
 	#else
 		#if (NUM_ANALOG_INPUTS>0)
 			A0
@@ -134,103 +134,108 @@
 	#endif
 	};
 
-
-	static const uint8_t digital_pin_map[] = {
-	#ifdef D0
-		D0
-	#endif
-	#ifdef D1
-		,D1
-	#endif
-	#ifdef D2
-		,D2
-	#endif
-	#ifdef D3
-		,D3
-	#endif
-	#ifdef D4
-		,D4
-	#endif
-	#ifdef D5
-		,D5
-	#endif
-	#ifdef D6
-		,D6
-	#endif
-	#ifdef D7
-		,D7
-	#endif
-	#ifdef D8
-		,D8
-	#endif
-	#ifdef D9
-		,D9
-	#endif
-	#ifdef D10
-		,D10
-	#endif
-	#ifdef D11
-		,D11
-	#endif
-	#ifdef D12
-		,D12
-	#endif
-	#ifdef D13
-		,D13
-	#endif
-	#ifdef D14
-		,D14
-	#endif
-	#ifdef D15
-		,D15
-	#endif
-	#ifdef D16
-		,D16
-	#endif
-	#ifdef D17
-		,D17
-	#endif
-	#ifdef D18
-		,D18
-	#endif
-	#ifdef D19
-		,D19
-	#endif
-	#ifdef D20
-		,D20
-	#endif
-	#ifdef D21
-		,D21
-	#endif
-	#ifdef D22
-		,D22
-	#endif
-	#ifdef D23
-		,D23
-	#endif
-	#ifdef D24
-		,D24
-	#endif
-	#ifdef D25
-		,D25
-	#endif
-	#ifdef D26
-		,D26
-	#endif
-	#ifdef D27
-		,D27
-	#endif
-	#ifdef D28
-		,D28
-	#endif
-	#ifdef D29
-		,D29
-	#endif
-	#ifdef D30
-		,D30
-	#endif
-	#ifdef D31
-		,D31
+  static const uint8_t digital_pin_map[] = {
+	#if defined(ARDUINO_ESP8266_WEMOS_D1MINI)
+    D0, D1, D2, D3, D4, D5, D6, D7, D8
+	#elif defined(ESP8266_NODEMCU)
+	  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10
+	#else
+		#ifdef D0
+			D0
+		#endif
+		#ifdef D1
+			,D1
+		#endif
+		#ifdef D2
+			,D2
+		#endif
+		#ifdef D3
+			,D3
+		#endif
+		#ifdef D4
+			,D4
+		#endif
+		#ifdef D5
+			,D5
+		#endif
+		#ifdef D6
+			,D6
+		#endif
+		#ifdef D7
+			,D7
+		#endif
+		#ifdef D8
+			,D8
+		#endif
+		#ifdef D9
+			,D9
+		#endif
+		#ifdef D10
+			,D10
+		#endif
+		#ifdef D11
+			,D11
+		#endif
+		#ifdef D12
+			,D12
+		#endif
+		#ifdef D13
+			,D13
+		#endif
+		#ifdef D14
+			,D14
+		#endif
+		#ifdef D15
+			,D15
+		#endif
+		#ifdef D16
+			,D16
+		#endif
+		#ifdef D17
+			,D17
+		#endif
+		#ifdef D18
+			,D18
+		#endif
+		#ifdef D19
+			,D19
+		#endif
+		#ifdef D20
+			,D20
+		#endif
+		#ifdef D21
+			,D21
+		#endif
+		#ifdef D22
+			,D22
+		#endif
+		#ifdef D23
+			,D23
+		#endif
+		#ifdef D24
+			,D24
+		#endif
+		#ifdef D25
+			,D25
+		#endif
+		#ifdef D26
+			,D26
+		#endif
+		#ifdef D27
+			,D27
+		#endif
+		#ifdef D28
+			,D28
+		#endif
+		#ifdef D29
+			,D29
+		#endif
+		#ifdef D30
+			,D30
+		#endif
+		#ifdef D31
+			,D31
+		#endif
 	#endif
 	};
 

@@ -320,14 +320,14 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 	char buffer[HEADER_MAX_SIZE] = {0};
 
 	/*uint8_t to = REQUEST_TIMEOUT;
-		
+
 	while (client->available()<20) {
 		delay(2);
 		yield();
 		to--;
 		if (to<1) break;
 	}*/
-	
+
 	//Serial.print("HR: ");
 	//Serial.println(client->available());
 
@@ -569,14 +569,14 @@ void HomeyClass::handleRequest() {
 
 bool HomeyClass::handleTcp() {
 	CLIENT_TYPE client = _tcpServer.available();
-	
-	uint8_t t = 100;
+
+	uint8_t t = REQUEST_TIMEOUT;
 	while ((client)&&(client.available()<10)&&(t>0)) {
 		delay(1);
 		yield();
 		t--;
 	}
-	
+
 	if (client) {
 		bool valid = parseHttpHeaders(&client);
 		if (client.connected()) {
@@ -652,20 +652,20 @@ void HomeyClass::streamWriteIndex(Stream* s) {
 	s->print("{\"id\":\"");
 	s->print(_deviceName);
 	s->print('"');
-	
+
 	//Version
 	s->print(",\"version\":\""HOMEYDUINO_VERSION"\"");
-	
+
 	//Type field
 	s->print(",\"type\":\"");
 	s->print(_deviceType);
 	s->print('"');
-	
+
 	//Class field
 	s->print(",\"class\":\"");
 	s->print(_deviceClass);
 	s->print('"');
-	
+
 	//RC field
 	if (rcEnabled) {
 		s->print(",\"rc\":{");
@@ -677,14 +677,14 @@ void HomeyClass::streamWriteIndex(Stream* s) {
 		s->print(NUM_ANALOG_INPUTS);
 		s->print('}');
 	}
-	
+
 	//Master field
 	s->print(",\"master\":{\"host\":\"");
 	s->print(_master_host);
 	s->print("\", \"port\":");
 	s->print(_master_port);
 	s->print('}');
-	
+
 	//Api field
 	s->print(",\"api\":[");
 	uint16_t i = 0;
@@ -799,7 +799,7 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 		//streamFlush(client); //Flush response
 		//(EthernetClient does not support cast to Stream...)
 		while(client.available()) client.read(); //Flush response
-		
+
 		client.stop();
 		yield();
 		return true;
