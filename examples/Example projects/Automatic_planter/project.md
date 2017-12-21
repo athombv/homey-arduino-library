@@ -304,29 +304,21 @@ void setup() {
   Homey.addCondition("moisture", onMoistureCondition);
 }
 
-void onPump() {
-  ...
-  if (!previousFloatState) return Homey.returnError("Tank empty!");
-  ...
-}
-
 void loop() {
   ...
   <in the interval>
-    bool currentFloatState = digitalRead(PIN_FLOAT);
+    bool currentMoistureSensorValue = analogRead(PIN_SENSOR);
 
-    if (previousFloatState != currentFloatState) {
-      previousFloatState = currentFloatState;
-      Homey.trigger("float", currentFloatState);
-      if (!currentFloatState) { //Tank empty
-        onStop();
-      }
+    if (previousMoistureSensorValue != currentMoistureSensorValue) {
+      previousMoistureSensorValue = currentMoistureSensorValue;
+      Homey.trigger("moisture", previousMoistureSensorValue);
     }
   ...
 }
 
-void onFloatCondition() {
-  return Homey.returnResult(digitalRead(3));
+void onMoistureCondition() {
+  int compareTo = Homey.value.toInt();
+  return Homey.returnResult(previousMoistureSensorValue>=compareTo);
 }
 ```
 
