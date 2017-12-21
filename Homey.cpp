@@ -675,7 +675,13 @@ void HomeyClass::streamWriteIndex(Stream* s) {
 		s->print(NUM_DIGITAL_PINS);
 		s->print(",\"numAnalogInputs\":");
 		s->print(NUM_ANALOG_INPUTS);
-		s->print('}');
+		s->print(", \"board\":\"");
+#ifdef ARDUINO_BOARD
+		s->print(ARDUINO_BOARD);
+#else
+		s->print("unknown");
+#endif
+		s->print("\"}");
 	}
 
 	//Master field

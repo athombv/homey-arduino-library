@@ -10,9 +10,18 @@ Except for the ESP8266 specific WiFi code the sketch can be used on any Homeydui
  * A 1kOhm resistor
 
 # 2. Building the hardware
-
+The DHT11 sensor is connected to the NodeMCU board using one data pin with a pull-up resistor.
 
  ![fritzing](fritzing.png)
+
+ | DHT11 pin | NodeMCU pin |
+ |-----------|-------------|
+ | 1         | 3v3         |
+ | 2         | D5          |
+ | 3         |             |
+ | 4         | GND         |
+
+ The pull-up resistor must be placed between the data pin ```D5``` and the 3.3v supply rail ```3v3```.
 
 # 3. The basic sketch
 

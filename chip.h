@@ -137,7 +137,7 @@
   static const uint8_t digital_pin_map[] = {
 	#if defined(ARDUINO_ESP8266_WEMOS_D1MINI)
     D0, D1, D2, D3, D4, D5, D6, D7, D8
-	#elif defined(ESP8266_NODEMCU)
+	#elif defined(ARDUINO_ESP8266_NODEMCU)
 	  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10
 	#else
 		#ifdef D0
