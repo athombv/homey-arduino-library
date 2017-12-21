@@ -3,19 +3,27 @@
 #include <Homey.h>
 #include <HomeyRemoteConfiguration.h>
 
+//Device settings
+#define SSID "<your wifi name>"
+#define PASS "<your wifi password>"
+#define ID "Change me"
+
+//No need to change anything below this line
 unsigned long previousMillis = 0;
-const unsigned long interval = 500; //Interval in milliseconds
+const unsigned long interval = 200; //Interval in milliseconds
 
 void setup() {
   Serial.begin(115200);
-  WiFi.begin("<ssid>", "<password>");
+  WiFi.begin(SSID, PASS);
   while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-
-  Homey.begin("Wemos D1 mini");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  
+  Homey.begin(ID);
 
   rcEnable(); //Enable remote configuration
 
-  Serial.println("READY.");
+  Serial.println("ready");
 }
 
 void loop() {
