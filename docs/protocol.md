@@ -12,17 +12,13 @@ If ```UDP``` broadcasting is not available devices can still be manually added b
 Example:
 ```
 {
-	"id": "esp32-demo",
+	"id": "example",
+	"version": "0.0.0",
 	"type": "homeyduino",
 	"class": "sensor",
-	"rc": {
-		"arch": "esp32",
-		"numDigitalPins": "40",
-		"numAnalogInputs": "16"
-	},
 	"master": {
-		"host": "192.168.1.11",
-		"port": 42419
+		"host": "0.0.0.0",
+		"port": 9999
 	},
 	"api": [
 			{
@@ -38,12 +34,12 @@ Example:
 				"type": "cap"
 			},
 			{
-				"name": "led1",
+				"name": "example_activity",
 				"type": "act"
 			},
 			{
-				"name": "led2",
-				"type": "act"
+				"name": "example_condition",
+				"type": "con"
 			}
 		]
 	}
@@ -53,16 +49,15 @@ Example:
 | Field             | Type      | Description                                                                               | Required | Default value       |
 |-------------------|-----------|-------------------------------------------------------------------------------------------|----------|---------------------|
 | id                | text      | Unique device identifier string                                                           | Yes      | (device specific)   |
+| version           | text      | Version of the Homeyduino Arduino library used in the device                              | Yes      |                     |  
 | type              | text      | Device type identifier string                                                             | Yes      | "homeyduino"        |
 | class             | text      | Device class identifier string                                                            | Yes      | "other"             |
-| rc                | object    | When set to true this field signals that the device supports the remote configuration API | No       | null                |
-| - arch            | text      | CPU architecture                                                                          | (Yes)    | "unknown"           |
-| - numDigitalPins  | number    | Number of digital pins on board                                                           | (Yes)    | 0                   |
-| - numAnalogInputs | number    | Number of analog inputs on board                                                          | (Yes)    | 0                   |
 | master            | object    | Information about the devices current master                                              | Yes      |                     |
 |   - host          | text      | IP address                                                                                | Yes      | 0.0.0.0             |
 |   - port          | number    | Port number                                                                               | Yes      | 9999                |
-| api               | list***   | List of API calls supported by the device                                                 | Yes      | []                  |
-|                   |           |                                                                                           |          |                     |
-|                   |           |                                                                                           |          |                     |
-|                   |           |                                                                                           |          |                     |
+| api               | list      | List of API calls supported by the device                                                 | Yes      | []                  |
+
+## Calling API endpoints
+All API endpoints are available at URI ```/<type>/<name>```. For example an activity called "example" would be available at URI ```/act/example```.
+
+A request may be either a POST or a GET type. 

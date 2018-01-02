@@ -135,36 +135,64 @@ bool HomeyClass::trigger(const String& name, bool value)
 	return _emit(name.c_str(), CTYPE_BOOL, str, TYPE_TRIGGER);
 }
 
-bool HomeyClass::setCapabilityValue(const String& name)
+bool HomeyClass::setCapabilityValue(const String& name, bool emit)
 {
+	if (!emit) {
+		_setValue(name.c_str(), CTYPE_NULL, "null", TYPE_CAPABILITY);
+		return true;
+	}
 	return _emit(name.c_str(), CTYPE_NULL, "null", TYPE_CAPABILITY);
 }
-bool HomeyClass::setCapabilityValue(const String& name, const char* value)
+bool HomeyClass::setCapabilityValue(const String& name, const char* value, bool emit)
 {
+	if (!emit) {
+		_setValue(name.c_str(), CTYPE_STRING, "\""+String(value)+"\"", TYPE_CAPABILITY);
+		return true;
+	}
 	return _emit(name.c_str(), CTYPE_STRING, "\""+String(value)+"\"", TYPE_CAPABILITY);
 }
-bool HomeyClass::setCapabilityValue(const String& name, const String& value)
+bool HomeyClass::setCapabilityValue(const String& name, const String& value, bool emit)
 {
+	if (!emit) {
+		_setValue(name.c_str(), CTYPE_STRING, "\""+value+"\"", TYPE_CAPABILITY);
+		return true;
+	}
 	return _emit(name.c_str(), CTYPE_STRING, "\""+value+"\"", TYPE_CAPABILITY);
 }
-bool HomeyClass::setCapabilityValue(const String& name, int value)
+bool HomeyClass::setCapabilityValue(const String& name, int value, bool emit)
 {
+	if (!emit) {
+		_setValue(name.c_str(), CTYPE_INT, String(value), TYPE_CAPABILITY);
+		return true;
+	}
 	return _emit(name.c_str(), CTYPE_INT, String(value), TYPE_CAPABILITY);
 }
-bool HomeyClass::setCapabilityValue(const String& name, float value)
+bool HomeyClass::setCapabilityValue(const String& name, float value, bool emit)
 {
+	if (!emit) {
+		_setValue(name.c_str(), CTYPE_FLOAT, String(value), TYPE_CAPABILITY);
+		return true;
+	}
 	return _emit(name.c_str(), CTYPE_FLOAT, String(value), TYPE_CAPABILITY);
 }
 
-bool HomeyClass::setCapabilityValue(const String& name, double value)
+bool HomeyClass::setCapabilityValue(const String& name, double value, bool emit)
 {
+	if (!emit) {
+		_setValue(name.c_str(), CTYPE_DOUBLE, String(value), TYPE_CAPABILITY);
+		return true;
+	}
 	return _emit(name.c_str(), CTYPE_DOUBLE, String(value), TYPE_CAPABILITY);
 }
 
-bool HomeyClass::setCapabilityValue(const String& name, bool value)
+bool HomeyClass::setCapabilityValue(const String& name, bool value, bool emit)
 {
 	String str = BVAL_FALSE;
 	if (value) str = BVAL_TRUE;
+	if (!emit) {
+		_setValue(name.c_str(), CTYPE_BOOL, str, TYPE_CAPABILITY);
+		return true;
+	}
 	return _emit(name.c_str(), CTYPE_BOOL, str, TYPE_CAPABILITY);
 }
 
@@ -758,12 +786,7 @@ bool HomeyClass::handleUdp() {
 	return false;
 }
 
-bool HomeyClass::_emit(const char* name, const char* argType, const String& triggerValue, const char* evType) {
-
-	/* Give OS control first */
-	yield();
-
-	/*Set value if corresponding API call exists and has value storage enabled */
+void HomeyClass::_setValue(const char* name, const char* argType, const String& triggerValue, const char* evType) {
 	HomeyFunction* function = find(name, evType);
 	if (function!=NULL) {
 		if (function->value!=NULL) {
@@ -771,6 +794,15 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 			*(function->valueType) = argType;
 		}
 	}
+}
+
+bool HomeyClass::_emit(const char* name, const char* argType, const String& triggerValue, const char* evType) {
+
+	/* Give OS control first */
+	yield();
+
+	/*Set value if corresponding API call exists and has value storage enabled */
+  _setValue(name, argType, triggerValue, evType);
 
 	/* Check if master has been configured */
 	if (_master_host[0]==0) return false;
