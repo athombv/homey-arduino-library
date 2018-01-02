@@ -1,4 +1,4 @@
-# The automatic planter
+# The automatic plant waterer
 
 ## 1. Introduction
 At the Athom office we have a very nice planter that adds some greenery to our place of work. However each week one of us needed to manually water the plants. Unacceptable of course, so we set out to automate the process.
