@@ -60,4 +60,5 @@ Example:
 ## Calling API endpoints
 All API endpoints are available at URI ```/<type>/<name>```. For example an activity called "example" would be available at URI ```/act/example```.
 
-A request may be either a POST or a GET type. 
+A request may be of either a POST or a GET type. If an API endpoint does not have a stored value (which is the case for activities and conditions) then both POST and GET will yield the same result: the callback function gets called and the result is returned.
+For endpoints with a stored value a GET request will return the current value of the endpoint, whereas a POST request will call the callback function.
