@@ -33,3 +33,7 @@
 | value 						 | String        | The argument supplied by the Homey flow (can be read from within an action, condition or capability callback)                                 |
 
 ## Remote configuration
+| Function        | Usage                                                               |
+|-----------------|---------------------------------------------------------------------|
+| rcEnable();     | Call this function from ```setup``` to enable remote configuration  |
+| rcTriggerRun(); | Call this function from ```loop``` to handle configured RC triggers |
