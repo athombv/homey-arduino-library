@@ -573,7 +573,7 @@ void HomeyClass::handleRequest() {
 			returnError("not found", 404);
 		} else if (_request.isPost) { //POST request
 			if (function->callback==NULL) {
-				returnError("not settable", 400);
+				returnError("not setable", 400);
 			} else {
 				value = _request.args;
 				returnNothing(); //Leave the answer up to the callback
@@ -582,7 +582,7 @@ void HomeyClass::handleRequest() {
 		} else { //GET request
 			if (function->value==NULL) { //Try returning the current value first (used for capabilities)
 				if (function->callback==NULL) {
-					returnError("not gettable", 400); //Return error
+					returnError("not getable", 400); //Return error
 				} else { //Else try to run the callback
 					value = _request.args;
 					returnNothing(); //Leave the answer up to the callback
