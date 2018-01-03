@@ -17,7 +17,7 @@
 /* -------------- DO NOT EDIT ANYTHING BELOW THIS LINE!  -------------- */
 /* (If you do you might break compatibility with the Homeyduino app...) */
 
-#define HOMEYDUINO_VERSION "1.0.0"
+#define HOMEYDUINO_VERSION "1.0.1"
 
 #define ENDPOINT_MAX_SIZE 17 //16 + null
 #define ARGUMENT_MAX_SIZE 65 //64 + null
@@ -158,14 +158,15 @@ class HomeyClass {
 
 
 		//Update a capability value
-		bool setCapabilityValue(const String& name, bool emit = true);							//Wrapper for emit(...) with NULL argument and type set to capability
-		bool setCapabilityValue(const String& name, const char* value, bool emit = true);			//Wrapper for emit(...) with char array argument type set to capability
-		bool setCapabilityValue(const String& name, const String& value), bool emit = true;		//Wrapper for emit(...) with String argument type set to capability
-		bool setCapabilityValue(const String& name, bool value, bool emit = true);				//Wrapper for emit(...) with bool argument type set to capability
-		bool setCapabilityValue(const String& name, int value, bool emit = true);					//Wrapper for emit(...) with int argument type set to capability
-		bool setCapabilityValue(const String& name, float value, bool emit = true);				//Wrapper for emit(...) with float argument type set to capability
-		bool setCapabilityValue(const String& name, double value, bool emit = true);				//Wrapper for emit(...) with double argument type set to capability
-
+		//bool setCapabilityValue(const String& name, bool emit = true);					//Wrapper for emit(...) with NULL argument and type set to capability
+		bool setCapabilityValue(const String& name, const char* value, bool emit = true);	//Wrapper for emit(...) with char array argument type set to capability
+		bool setCapabilityValue(const String& name, const String& value, bool emit = true);	//Wrapper for emit(...) with String argument type set to capability
+		bool setCapabilityValue(const String& name, bool value, bool emit = true);			//Wrapper for emit(...) with bool argument type set to capability
+		bool setCapabilityValue(const String& name, int value, bool emit = true);			//Wrapper for emit(...) with int argument type set to capability
+		bool setCapabilityValue(const String& name, float value, bool emit = true);			//Wrapper for emit(...) with float argument type set to capability
+		bool setCapabilityValue(const String& name, double value, bool emit = true);		//Wrapper for emit(...) with double argument type set to capability
+		
+		
 		//Send a raw event (not handled by Homeyduino app!)
 		bool emit(const String& name);											//Wrapper for emit(...) with NULL argument and type set to raw
 		bool emit(const String& name, const char* value);						//Wrapper for emit(...) with char array argument type set to raw
