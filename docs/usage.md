@@ -117,7 +117,7 @@ The second type is ```condition```. Conditions determine the direction of execut
 
 The third type is ```action```. An action, just like a condition, is a request sent from Homey to your Arduino project which will cause your callback to be executed. However Homey does not care about the result of the request. An action can be started using a flowcard.
 
-The fourth and last type is ```capability```. A capability is a combination of the types described above, allowing for further integration with a device. A capability can be settable or gettable, depening on the type of capabilty. A sensor can only be read while an output can only be written to. Capabilities are not directly available using flowcards, however most capabilities automatically exposed as flowcards to the user.
+The fourth and last type is ```capability```. A capability is a combination of the types described above, allowing for further integration with a device. A capability can be setable or getable, depending on the type of capabiltiy. A sensor can only be read while an output can only be written to. Capabilities are not directly available using flowcards, however most capabilities automatically exposed as flowcards to the user.
 
 ### Triggers
 Triggers are used to start a Homey flow. A trigger can be sent to homey by running ```Homey.trigger("example");``` or by running ```Homey.trigger("example", value);``` where value can be a ```String```, ```bool```, ```int```, ```float``` or ```double``` type.
