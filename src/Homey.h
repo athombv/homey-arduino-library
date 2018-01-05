@@ -17,7 +17,7 @@
 /* -------------- DO NOT EDIT ANYTHING BELOW THIS LINE!  -------------- */
 /* (If you do you might break compatibility with the Homeyduino app...) */
 
-#define HOMEYDUINO_VERSION "1.0.1"
+#define HOMEYDUINO_VERSION "1.0.2"
 
 #define ENDPOINT_MAX_SIZE 17 //16 + null
 #define ARGUMENT_MAX_SIZE 65 //64 + null
