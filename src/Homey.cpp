@@ -135,14 +135,14 @@ bool HomeyClass::trigger(const String& name, bool value)
 	return _emit(name.c_str(), CTYPE_BOOL, str, TYPE_TRIGGER);
 }
 
-bool HomeyClass::setCapabilityValue(const String& name, bool emit)
+/*bool HomeyClass::setCapabilityValue(const String& name, bool emit)
 {
 	if (!emit) {
 		_setValue(name.c_str(), CTYPE_NULL, "null", TYPE_CAPABILITY);
 		return true;
 	}
 	return _emit(name.c_str(), CTYPE_NULL, "null", TYPE_CAPABILITY);
-}
+}*/
 bool HomeyClass::setCapabilityValue(const String& name, const char* value, bool emit)
 {
 	if (!emit) {
@@ -682,7 +682,7 @@ void HomeyClass::streamWriteIndex(Stream* s) {
 	s->print('"');
 
 	//Version
-	s->print(",\"version\":\""HOMEYDUINO_VERSION"\"");
+	s->print(",\"version\":\"" HOMEYDUINO_VERSION "\"");
 
 	//Type field
 	s->print(",\"type\":\"");
