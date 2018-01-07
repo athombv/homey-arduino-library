@@ -7,7 +7,7 @@ With this example you can create your own HUE lamp controlled by Homey. It gives
 * [WeMos D1 mini V2](https://nl.aliexpress.com/wholesale?catId=0&initiative_id=SB_20180102232002&SearchText=WeMos+D1+mini+V2)
 * [RGB Led Strip Driver module](https://nl.aliexpress.com/wholesale?catId=0&initiative_id=SB_20180102231858&SearchText=RGB+Led+Strip+Driver+module) <br>
   <i>this shield is based on the P9813 chip</i>
-* [DC/DC converter]([https://nl.aliexpress.com/wholesale?catId=0&initiative_id=SB_20180102232329&SearchText=DC+DC+Step+Down+Buck+Converter) <br>
+* [DC/DC converter](https://nl.aliexpress.com/wholesale?catId=0&initiative_id=SB_20180102232329&SearchText=DC+DC+Step+Down+Buck+Converter) <br>
   <i>the leds works on 12 volt but the WeMos needs 5 volt. 500mA is more than enough</i>
 * [12v DC wall-plug adapter](https://nl.aliexpress.com/wholesale?catId=0&initiative_id=SB_20180102234456&SearchText=12+volt+power+supply) <br>
   <i>The power (amperes) you need depending on the amount of LEDs.</i>
@@ -15,8 +15,8 @@ With this example you can create your own HUE lamp controlled by Homey. It gives
   <i>Use RGB led stript, not the RGBW.</i>
 
 Optional part
-* [Arduino relay shield](https://nl.aliexpress.com/wholesale?catId=0&initiative_id=SB_20180103000429&SearchText=arduino+relay+shield)<br>
-  <i>If you have 12 volt lighting that you want to turn on immediately when you switch on color LEDs you can connect an extra relay to the Wemos.</i>
+* [Wemos relais shield](https://nl.aliexpress.com/wholesale?catId=0&initiative_id=SB_20180107000934&SearchText=wemos+relais+shield)<br>
+  <i>If you have 12 volt lighting that you want to turn on immediately when you switch on the RGB LED strip you can connect an extra relais to the Wemos by an relais shield. If you want to use something else like a Arduino relais shield watch out for the voltage because the Wemos runs on 3.3 volt.</i>
 
 ## 3. Software
 For this project you need to add the following libraries.
@@ -46,13 +46,16 @@ When turn on the RGB led strip from Homey, than automaticaly the relais will swi
 For that:
 * Connect the VO+ (5volt) of the DC/DC converter to the relais shield.
 * Connect then GND of the DC/DC converter to the relais shield.
-* Connect the D2 of the Wemos to the Din of the relais shield.
+* Connect the D1 of the Wemos to the Din of the relais shield.
 
 
 | Wemos pin   | Description                                                             |
 |-------------|-------------------------------------------------------------------------|
 | 5V          | 5 volt from DC/DC converter (VO+)                                       |
 | GND (G)     | GND from DC/DC converter (GND)                                          |
-| D2          | Optional to relias shield                                               |
+| D1          | Optional to relias shield                                               |
 | D3          | Cin of LED shield => clock input                                        |
 | D4          | Din of LED shield => data input                                         |
+
+![PCB](PCB_front.jpg)
+![PCB](PCB_back.jpg)
