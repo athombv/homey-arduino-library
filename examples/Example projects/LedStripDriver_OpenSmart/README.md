@@ -59,3 +59,5 @@ For that:
 
 ![PCB](PCB_front.jpg)
 ![PCB](PCB_back.jpg)
+
+[3D box to put everything together](https://www.tinkercad.com/things/8Ej6zM3998g-homeyduino-rgb-driver-box)
