@@ -56,3 +56,6 @@ For that:
 | D1          | Optional to relias shield                                               |
 | D3          | Cin of LED shield => clock input                                        |
 | D4          | Din of LED shield => data input                                         |
+
+![PCB](PCB_front.jpg)
+![PCB](PCB_back.jpg)
