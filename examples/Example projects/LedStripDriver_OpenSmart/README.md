@@ -61,5 +61,5 @@ For that:
 ![PCB](PCB_back.jpg)
 
 ## 5. nice links
-[Video how its work](https://youtu.be/M0kDY31bzbA)
+[Video how its works](https://youtu.be/M0kDY31bzbA)<br>
 [3D box to put everything together](https://www.tinkercad.com/things/8Ej6zM3998g-homeyduino-rgb-driver-box)
