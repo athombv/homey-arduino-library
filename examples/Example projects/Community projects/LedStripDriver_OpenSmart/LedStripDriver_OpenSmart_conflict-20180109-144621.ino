@@ -17,43 +17,36 @@
 #include <Homey.h>              //Athom Homey library
 #include <ChainableLED.h>       //P9813 driver library
 
-
 //configuration LED driver
 #define NUM_LEDS  1   //number of leds (chips) in series
 #define LED_PIN_C D3  //clock pin
 #define LED_PIN_D D4  //data pin
+#define RELAIS_PIN D1 //relais shield
+
 boolean ledOnOff = false;
 float ledHue = 0;
 float ledSaturation = 0;
 float ledBrightness = 0;
 
-//define relais, you can use dit optional to switch other lamps
-#define RELAIS_PIN D1 //relais shield
-
-
 ChainableLED leds(LED_PIN_C, LED_PIN_D, NUM_LEDS);
-
-//Global variables only need for startup and set values back to Homey
-boolean isStarted = false;
 
 IPAddress ip;
 
 //Arduino functions
 void setup() {
-  //Enable serial port
-  //Serial.begin(115200);
-  //Serial.println("Connect to wifi");
+  Serial.begin(115200);
+  Serial.println("Connecting to wifi...");
 
   //Connect to network
   WiFi.begin("your SSID", "your password");
   while (WiFi.status() != WL_CONNECTED) { 
     delay(200); 
-    //Serial.print(".");
+    Serial.print(".");
   }
   //Print IP address
   ip = WiFi.localIP();
-  //Serial.print("IP address: ");
-  //Serial.println(ip.toString());
+  Serial.print("IP address: ");
+  Serial.println(ip.toString());
     
   //Start Homey library
   Homey.begin("Arduino LedStrip");
@@ -70,18 +63,12 @@ void setup() {
   pinMode(RELAIS_PIN, OUTPUT);
   
   //Serial.println("Setup completed");
+
+  Homey.setCapabilityValue("onoff", ledOnOff); //Set initial value
 }
 
 void loop() {
-  
-  //Handle incoming connections
   Homey.loop();
-
-  if(!isStarted){
-    //set Led status back to Homey, only ones
-    Homey.setCapabilityValue("onoff", ledOnOff); //this will not work, I know now why
-    isStarted = true;
-  }
 }
 
 
