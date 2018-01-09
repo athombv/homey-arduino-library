@@ -802,7 +802,7 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 	yield();
 
 	/*Set value if corresponding API call exists and has value storage enabled */
-  _setValue(name, argType, triggerValue, evType);
+	_setValue(name, argType, triggerValue, evType);
 
 	/* Check if master has been configured */
 	if (_master_host[0]==0) return false;
