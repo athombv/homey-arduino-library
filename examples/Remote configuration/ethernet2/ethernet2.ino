@@ -27,11 +27,5 @@ void setup() {
 }
 
 void loop() {
-  Homey.loop();
-
-  unsigned long currentMillis = millis();
-  if(currentMillis - previousMillis > interval) {
-    previousMillis = currentMillis;
-    rcTriggerRun(); //Run RC triggers
-  }
+  HomeyRemoteConfigurationLoop();
 }
