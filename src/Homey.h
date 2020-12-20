@@ -77,6 +77,15 @@
 	#define TCP_SERVER_TYPE EthernetServer
 	#define MAXCALLBACKS 10
 	#define CAN_NOT_STOP_TCP
+#elif defined(ARDUINO_ARCH_MEGAAVR)
+	#include <WiFiNINA.h>
+	#include <WiFiUdp.h>
+	#define CLIENT_TYPE WiFiClient
+	#define UDP_SERVER_TYPE WiFiUDP
+	#define TCP_SERVER_TYPE WiFiServer
+	#define UDP_TX_PACKET_MAX_SIZE 1024
+	#define MAXCALLBACKS 10
+	#define CAN_NOT_STOP_TCP
 #else
 	#include <Ethernet2.h>
 	#include <EthernetUdp2.h>
