@@ -561,7 +561,8 @@ void HomeyClass::handleRequest() {
 		}
 		String type = _request.endpoint.substring(0,position);
 		String name = _request.endpoint.substring(position+1);
-
+		name.replace(".","X");
+		
 		DEBUG_PRINT("searching '");
 		DEBUG_PRINT(name);
 		DEBUG_PRINT("' of type '");
@@ -725,7 +726,10 @@ void HomeyClass::streamWriteIndex(Stream* s) {
 	HomeyFunction *item = firstHomeyFunction;
 	while (item!=NULL) {
 		s->print("{\"name\":\"");
-		s->print(item->name);
+		String fooname = item->name;
+		fooname.replace("X", ".");
+		s->print(fooname);
+		//s->print(item->name);
 		s->print("\", \"type\":\"");
 		s->print(item->type);
 		s->print("\"}");
@@ -809,11 +813,13 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 
 	/* Execute request */
 	CLIENT_TYPE client;
-	if (client.connect(_master_host, _master_port)) {
+	if (client.connect(_master_host, _master_port)) { 
+		String fooname = name;
+		fooname.replace("X", ".");
 		client.print("POST /emit/");
 		client.print(evType);
 		client.print('/');
-		client.print(name);
+		client.print(fooname);
 		client.println(" HTTP/1.1");
 		client.println("Content-Type: application/json");
 		client.println("Connection: close");
