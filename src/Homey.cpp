@@ -246,7 +246,7 @@ void HomeyClass::returnNothing()
 void HomeyClass::returnError(const String& error, uint16_t code)
 {
 	_response.code = code;
-	_response.response  = '\"';
+	_response.response  = "\"";
 	_response.response += error;
 	_response.response += '\"';
 	_response.type = "err";

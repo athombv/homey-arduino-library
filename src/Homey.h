@@ -69,6 +69,13 @@
 	#define TCP_SERVER_TYPE WiFiServer
 	#define UDP_TX_PACKET_MAX_SIZE 1024
 	#define MAXCALLBACKS 10
+#elif defined(ARDUINO_SAMD_MKRWIFI1010) || defined(ARDUINO_SAMD_MKRWIFI1000)
+	#include <WiFiNINA.h>
+	#define CLIENT_TYPE WiFiClient
+	#define UDP_SERVER_TYPE WiFiUDP
+	#define TCP_SERVER_TYPE WiFiServer
+	#define MAXCALLBACKS 10
+	#define CAN_NOT_STOP_TCP
 #elif defined(HOMEY_USE_ETHERNET_V1)
 	#include <Ethernet.h>
 	#include <EthernetUdp.h>
