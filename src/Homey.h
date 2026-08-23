@@ -14,19 +14,34 @@
 #define DEVICE_TYPE		 	"homeyduino"	//Device type
 #define RC_LOOP_INTERVAL	500
 
-/* -------------- DO NOT EDIT ANYTHING BELOW THIS LINE!  -------------- */
-/* (If you do you might break compatibility with the Homeyduino app...) */
+/* -------------- Buffer sizes below are safe to adjust -------------- */
+/* Increased for sub-capability support (e.g. measure_temperature.bedroom) */
+/* on 32-bit platforms (ESP32 / ESP8266) which have ample heap memory.    */
 
-#define HOMEYDUINO_VERSION "1.0.2"
+#define HOMEYDUINO_VERSION "1.0.3"
 
-#define ENDPOINT_MAX_SIZE 17 //16 + null
-#define ARGUMENT_MAX_SIZE 65 //64 + null
-#define REQUEST_MAX_SIZE ENDPOINT_MAX_SIZE+ARGUMENT_MAX_SIZE
-#define HEADER_MAX_SIZE REQUEST_MAX_SIZE+16
-#define REQUEST_TIMEOUT 250
+/* Maximum length of a capability/action/condition name (including the
+ * optional dot-suffix for sub-capabilities, e.g. "measure_temperature.outside").
+ * NOTE: this is only used as a guard in strnlen/strncmp — it does NOT allocate
+ * a buffer of this size. Heap allocation uses strlen(name)+1 bytes.
+ * 48 chars covers all known Homey capability names with a generous suffix. */
+#define MAX_NAME_LENGTH 48
 
-#define MAX_NAME_LENGTH 24
+/* Maximum length of a TYPE string (e.g. "cap", "act", "trg"). Must stay 5. */
 #define MAX_TYPE_LENGTH 5
+
+/* HTTP endpoint buffer: "/" + type(3) + "/" + name(MAX_NAME_LENGTH) + '\0'
+ * e.g. "/cap/measure_temperature.sensor_zone_1" = 44 chars + null → 54 is safe. */
+#define ENDPOINT_MAX_SIZE 54
+
+/* Argument / POST body buffer. Unchanged — 65 chars is sufficient for all
+ * values Homey sends (numbers, booleans, setmaster IP:port). */
+#define ARGUMENT_MAX_SIZE 65
+
+/* Derived sizes – do not set manually. */
+#define REQUEST_MAX_SIZE  (ENDPOINT_MAX_SIZE + ARGUMENT_MAX_SIZE)
+#define HEADER_MAX_SIZE   (REQUEST_MAX_SIZE + 16)
+#define REQUEST_TIMEOUT   250
 
 #define TYPE_ACTION 		"act"
 #define TYPE_CONDITION		"con"
