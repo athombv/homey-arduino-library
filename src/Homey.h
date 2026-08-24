@@ -15,8 +15,9 @@
 #define RC_LOOP_INTERVAL	500
 
 /* -------------- Buffer sizes below are safe to adjust -------------- */
-/* Increased for sub-capability support (e.g. measure_temperature.bedroom) */
-/* on 32-bit platforms (ESP32 / ESP8266) which have ample heap memory.    */
+/* Increased for sub-capability support (e.g. measure_temperature.bedroom). */
+/* Note: these constants apply to all targets; HEADER_MAX_SIZE affects a stack */
+/* buffer in parseHttpHeaders(), while names are stored with heap allocation. */
 
 #define HOMEYDUINO_VERSION "1.0.3"
 
