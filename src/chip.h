@@ -17,7 +17,11 @@
 	#endif
 
 	static const uint8_t analog_input_map[] = {
-	#if defined(ARDUINO_ARCH_ESP32)
+	#if defined(ARDUINO_XIAO_ESP32C6) 
+		A0,
+		A1,
+		A2
+	#elif defined(ARDUINO_ARCH_ESP32) 
 		A0,
 		A3,
 		A4,
