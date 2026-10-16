@@ -219,7 +219,7 @@ bool HomeyClass::emit(const String& name, float value)
 
 bool HomeyClass::emit(const String& name, double value)
 {
-	return _emit(name.c_str(), CTYPE_FLOAT, String(value), TYPE_RAW);
+	return _emit(name.c_str(), CTYPE_DOUBLE, String(value), TYPE_RAW);
 }
 
 bool HomeyClass::emit(const String& name, bool value)
@@ -318,7 +318,7 @@ bool HomeyClass::split(char* buffer, char*& a, char*& b, char separator, uint16_
 	a = buffer; //Set to start of buffer
 	b = &buffer[size-1]; //Set to end of buffer
 
-	for (uint8_t i = 0; i<size; i++) { //Find separator in buffer
+	for (uint16_t i = 0; i<size; i++) { //Find separator in buffer
 		if (buffer[i]==0) break; //Stop when at end-of-string
 		if (buffer[i]==separator) { //If current character is separator
 			buffer[i]=0; //Replace with end-of-string
@@ -435,6 +435,10 @@ bool HomeyClass::parseHttpHeaders(CLIENT_TYPE* client) {
 
 	if (_request.isPost) { //Read POST data
 		_request.args = "";
+		int avail = client->available();
+		if (avail > 0) {
+			_request.args.reserve(avail);
+		}
 		while (client->connected() && client->available()) {
 			_request.args += (char) client->read();
 		}
@@ -599,7 +603,7 @@ bool HomeyClass::handleTcp() {
 	CLIENT_TYPE client = _tcpServer.available();
 
 	uint8_t t = REQUEST_TIMEOUT;
-	while ((client)&&(client.available()<10)&&(t>0)) {
+	while ((client) && (client.connected()) && (client.available()<10) && (t>0)) {
 		delay(1);
 		yield();
 		t--;
@@ -815,17 +819,21 @@ bool HomeyClass::_emit(const char* name, const char* argType, const String& trig
 		client.print('/');
 		client.print(name);
 		client.println(" HTTP/1.1");
+		client.print("Host: ");
+		client.print(_master_host);
+		client.print(':');
+		client.println(_master_port);
 		client.println("Content-Type: application/json");
 		client.println("Connection: close");
 		client.print("Content-Length: ");
-		client.println(9+13+2+strlen(argType)+triggerValue.length());
+		client.println(9+13+1+strlen(argType)+triggerValue.length());
 
 		client.println();
 		client.print("{\"type\":\""); //9
 		client.print(argType);
 		client.print("\",\"argument\":"); //13
 		client.print(triggerValue);
-		client.println('}'); //2
+		client.print('}'); //1
 
 		uint8_t timeout = 200;
 		while (client.available()==0) {
