@@ -119,7 +119,7 @@ void rcTriggerRegister(const String& name, uint8_t pin, bool analog)
 	}
 
 	rcTrigger* newItem = new rcTrigger;
-	name.toCharArray(newItem->name, 3);
+	name.toCharArray(newItem->name, sizeof(newItem->name));
 	newItem->pin = pin;
 	newItem->analog = analog;
 	newItem->prevState = digitalRead(pin);
@@ -177,14 +177,22 @@ void rcTriggerRun()
 		DEBUG_PRINT(item->name);
 		DEBUG_PRINT(" ");
 		uint16_t state;
+		bool changed = false;
 		if (item->analog) {
 			state = analogRead(item->pin);
+			// Require at least a 2-unit delta to filter ADC noise jitter
+			if (abs((int)state - (int)item->prevState) >= 2) {
+				changed = true;
+			}
 		} else {
 			state =	digitalRead(item->pin);
+			if (state != item->prevState) {
+				changed = true;
+			}
 		}
 		DEBUG_PRINT(" = ");
 		DEBUG_PRINTLN(state);
-		if (state!=item->prevState) {
+		if (changed) {
 			item->prevState = state;
 			if (item->analog) {
 				Homey.trigger(String(item->name), (int) state);
